@@ -37,12 +37,15 @@ $currentUser = getCurrentUser($pdo);
                         <i class="bi bi-journals"></i> Дневники
                     </a>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="statistics.php">
-                        <i class="bi bi-graph-up"></i> Статистика
-                    </a>
-                </li>
-                <?php if (isAdmin()): ?>
+<li class="nav-item dropdown">
+    <a class="nav-link dropdown-toggle" href="#" id="statsDropdown" role="button" data-bs-toggle="dropdown">
+        <i class="bi bi-graph-up"></i> Статистика
+    </a>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="statistics.php">Общая статистика</a></li>
+        <li><a class="dropdown-item" href="student_stats.php">По ученикам</a></li>
+    </ul>
+</li>                <?php if (isAdmin()): ?>
                 <li class="nav-item">
                     <a class="nav-link" href="admin.php">
                         <i class="bi bi-gear"></i> Администрирование
