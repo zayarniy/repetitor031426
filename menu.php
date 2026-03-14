@@ -30,6 +30,10 @@ $currentUser = getCurrentUser($pdo);
                         <li><a class="dropdown-item" href="topics.php">Темы</a></li>
                         <li><a class="dropdown-item" href="labels.php">Метки</a></li>
                         <li><a class="dropdown-item" href="resources.php">Ресурсы</a></li>
+                                <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="planning.php">
+            <i class="bi bi-calendar-week"></i> Планирование
+        </a></li>
                     </ul>
                 </li>
                 <li class="nav-item">
