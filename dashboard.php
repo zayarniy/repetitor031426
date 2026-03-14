@@ -503,7 +503,7 @@ foreach ($schedule as $lesson) {
                                             (<?php echo floor($lesson['duration'] / 60) . 'ч ' . ($lesson['duration'] % 60) . 'м'; ?>)
                                         </div>
                                         <div class="lesson-student">
-                                            <?php echo htmlspecialchars($lesson['last_name'] . ' ' . $lesson['first_name']); ?>
+                                            <?php echo htmlspecialchars($lesson['student_last_name'] . ' ' . $lesson['student_first_name']); ?>
                                         </div>
                                         <div class="lesson-diary">
                                             <?php echo htmlspecialchars($lesson['diary_name']); ?>
