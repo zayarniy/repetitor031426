@@ -620,9 +620,16 @@ $diaryLessons = [];
 
 if (($action === 'view' || $action === 'edit') && $diaryId) {
     $stmt = $pdo->prepare("
-        SELECT d.*, s.last_name, s.first_name, s.middle_name, s.class
+        SELECT d.*, 
+               s.last_name, 
+               s.first_name, 
+               s.middle_name, 
+               s.class,
+               c.name as category_name,
+               c.color as category_color
         FROM diaries d
         JOIN students s ON d.student_id = s.id
+        LEFT JOIN categories c ON d.category_id = c.id
         WHERE d.id = ? AND d.user_id = ?
     ");
     $stmt->execute([$diaryId, $userId]);
@@ -1028,84 +1035,99 @@ if ($publicView) {
             </div>
             
             <!-- Список дневников -->
-            <div class="row">
-                <?php if (empty($diaries)): ?>
-                    <div class="col-12">
-                        <div class="alert alert-info text-center py-5">
-                            <i class="bi bi-journal" style="font-size: 3rem;"></i>
-                            <h4 class="mt-3">Дневники не найдены</h4>
-                            <p>Создайте первый дневник, нажав кнопку "Создать дневник"</p>
-                        </div>
-                    </div>
-                <?php else: ?>
-                    <?php foreach ($diaries as $diary): ?>
-                        <div class="col-md-6 col-lg-4">
-                            <div class="diary-card" style="border-left-color: <?php echo $diary['category_color'] ?? '#808080'; ?>">
-                                <div class="diary-name">
-                                    <?php echo htmlspecialchars($diary['name']); ?>
-                                    <?php if ($diary['public_link']): ?>
-                                        <span class="public-link-badge" title="Есть публичная ссылка">
-                                            <i class="bi bi-link"></i>
-                                        </span>
-                                    <?php endif; ?>
-                                </div>
-                                
-                                <div class="diary-student">
-                                    <i class="bi bi-person"></i>
-                                    <?php echo htmlspecialchars($diary['student_last_name'] . ' ' . $diary['student_first_name'] . ' ' . ($diary['student_middle_name'] ?? '')); ?>
-                                    <?php if ($diary['student_class']): ?>
-                                        <small class="text-muted">(<?php echo htmlspecialchars($diary['student_class']); ?> класс)</small>
-                                    <?php endif; ?>
-                                </div>
-                                
-                                <?php if ($diary['category_name']): ?>
-                                    <div class="diary-category" style="background: <?php echo $diary['category_color'] ?? '#808080'; ?>">
-                                        <?php echo htmlspecialchars($diary['category_name']); ?>
-                                    </div>
-                                <?php endif; ?>
-                                
-                                <?php if (!empty($diary['description'])): ?>
-                                    <div class="small text-muted mb-2">
-                                        <?php echo nl2br(htmlspecialchars(substr($diary['description'], 0, 100) . (strlen($diary['description']) > 100 ? '...' : ''))); ?>
-                                    </div>
-                                <?php endif; ?>
-                                
-                                <div class="diary-meta">
-                                    <span class="diary-meta-item">
-                                        <i class="bi bi-currency-ruble"></i>
-                                        <?php echo $diary['lesson_cost'] ? number_format($diary['lesson_cost'], 0, ',', ' ') : '—'; ?>
-                                    </span>
-                                    <span class="diary-meta-item">
-                                        <i class="bi bi-clock"></i>
-                                        <?php echo $diary['lesson_duration'] ? $diary['lesson_duration'] . ' мин' : '—'; ?>
-                                    </span>
-                                    <span class="diary-meta-item">
-                                        <i class="bi bi-calendar-check"></i>
-                                        <?php echo $diary['lessons_count']; ?> занятий
-                                    </span>
-                                </div>
-                                
-                                <div class="mt-3 d-flex justify-content-end gap-2">
-                                    <a href="?action=view&id=<?php echo $diary['id']; ?>" class="btn btn-sm btn-outline-primary">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
-                                    <a href="?action=edit&id=<?php echo $diary['id']; ?>" class="btn btn-sm btn-outline-secondary">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
-                                    <a href="?copy=1&id=<?php echo $diary['id']; ?>" class="btn btn-sm btn-outline-info" 
-                                       onclick="return confirm('Создать копию дневника?')">
-                                        <i class="bi bi-files"></i>
-                                    </a>
-                                    <a href="?delete=1&id=<?php echo $diary['id']; ?>" class="btn btn-sm btn-outline-danger" 
-                                       onclick="return confirm('Удалить дневник?')">
-                                        <i class="bi bi-trash"></i>
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
+<!-- Список дневников -->
+<!-- Список дневников -->
+<div class="row">
+    <?php if (empty($diaries)): ?>
+        <div class="col-12">
+            <div class="alert alert-info text-center py-5">
+                <i class="bi bi-journal" style="font-size: 3rem;"></i>
+                <h4 class="mt-3">Дневники не найдены</h4>
+                <p>Создайте первый дневник, нажав кнопку "Создать дневник"</p>
             </div>
+        </div>
+    <?php else: ?>
+        <?php foreach ($diaries as $diary): ?>
+            <div class="col-md-6 col-lg-4">
+                <div class="diary-card" style="border-left-color: <?php echo $diary['category_color'] ?? '#808080'; ?>">
+                    <div class="diary-name">
+                        <?php echo htmlspecialchars($diary['name']); ?>
+                        <?php if ($diary['public_link']): ?>
+                            <span class="public-link-badge" title="Есть публичная ссылка">
+                                <i class="bi bi-link"></i>
+                            </span>
+                        <?php endif; ?>
+                    </div>
+                    
+                    <div class="diary-student">
+                        <i class="bi bi-person"></i>
+                        <?php 
+                        // Получаем информацию об ученике для этого дневника
+                        $stmtStudent = $pdo->prepare("SELECT last_name, first_name, middle_name, class FROM students WHERE id = ?");
+                        $stmtStudent->execute([$diary['student_id']]);
+                        $student = $stmtStudent->fetch();
+                        if ($student):
+                        ?>
+                            <?php echo htmlspecialchars($student['last_name'] . ' ' . $student['first_name'] . ' ' . ($student['middle_name'] ?? '')); ?>
+                            <?php if ($student['class']): ?>
+                                <small class="text-muted">(<?php echo htmlspecialchars($student['class']); ?> класс)</small>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            <span class="text-muted">Ученик не найден</span>
+                        <?php endif; ?>
+                    </div>
+                    
+                    <?php if ($diary['category_name']): ?>
+                        <div class="diary-category" style="background: <?php echo $diary['category_color'] ?? '#808080'; ?>">
+                            <?php echo htmlspecialchars($diary['category_name']); ?>
+                        </div>
+                    <?php endif; ?>
+                    
+                    <?php if (!empty($diary['description'])): ?>
+                        <div class="small text-muted mb-2">
+                            <?php echo nl2br(htmlspecialchars(substr($diary['description'], 0, 100) . (strlen($diary['description']) > 100 ? '...' : ''))); ?>
+                        </div>
+                    <?php endif; ?>
+                    
+                    <div class="diary-meta">
+                        <span class="diary-meta-item">
+                            <i class="bi bi-currency-ruble"></i>
+                            <?php echo $diary['lesson_cost'] ? number_format($diary['lesson_cost'], 0, ',', ' ') : '—'; ?>
+                        </span>
+                        <span class="diary-meta-item">
+                            <i class="bi bi-clock"></i>
+                            <?php echo $diary['lesson_duration'] ? $diary['lesson_duration'] . ' мин' : '—'; ?>
+                        </span>
+                        <span class="diary-meta-item">
+                            <i class="bi bi-calendar-check"></i>
+                            <?php echo $diary['lessons_count']; ?> занятий
+                        </span>
+                    </div>
+                    
+                    <div class="mt-3 d-flex justify-content-end gap-2">
+                                <a href="lessons.php?diary_id=<?php echo $diary['id']; ?>" class="btn btn-sm btn-outline-success" title="Перейти к занятиям">
+            <i class="bi bi-calendar-check"></i>
+        </a>
+                        <a href="?action=view&id=<?php echo $diary['id']; ?>" class="btn btn-sm btn-outline-primary" title="Просмотр">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                        <a href="?action=edit&id=<?php echo $diary['id']; ?>" class="btn btn-sm btn-outline-secondary" title="Редактировать">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <a href="?copy=1&id=<?php echo $diary['id']; ?>" class="btn btn-sm btn-outline-info" title="Создать копию"
+                           onclick="return confirm('Создать копию дневника?')">
+                            <i class="bi bi-files"></i>
+                        </a>
+                        <a href="?delete=1&id=<?php echo $diary['id']; ?>" class="btn btn-sm btn-outline-danger" title="Удалить"
+                           onclick="return confirm('Удалить дневник?')">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    <?php endif; ?>
+</div>
             
         <?php elseif ($action === 'add' || $action === 'edit'): ?>
             <!-- Форма добавления/редактирования дневника -->
@@ -1533,5 +1555,7 @@ if ($publicView) {
         }
     </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>    
+<?php include 'footer.php'; ?>
 </body>
+
 </html>

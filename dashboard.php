@@ -495,7 +495,7 @@ foreach ($schedule as $lesson) {
                             elseif ($lesson['is_cancelled']) $lessonClass = 'cancelled';
                         ?>
                             <div class="lesson-item <?php echo $lessonClass; ?>" 
-                                 onclick="window.location.href='lesson_edit.php?id=<?php echo $lesson['id']; ?>&from=dashboard'">
+                                onclick="window.location.href='lessons.php?action=edit&id=<?php echo $lesson['id']; ?>&diary_id=<?php echo $lesson['diary_id']; ?>&from=dashboard'">
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div>
                                         <div class="lesson-time">
@@ -554,5 +554,6 @@ foreach ($schedule as $lesson) {
     </script>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <? include 'footer.php'?>
 </body>
 </html>
