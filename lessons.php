@@ -583,6 +583,136 @@ if ($publicView) {
     font-size: 0.75rem;
     padding: 3px 8px;
 }
+
+/* Стили для бейджей оценок */
+.grade-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: 500;
+    margin-right: 5px;
+    margin-bottom: 5px;
+}
+
+.grade-badge i {
+    margin-right: 3px;
+}
+
+.grade-badge.grade-5 {
+    background: #28a745;
+    color: white;
+}
+
+.grade-badge.grade-4 {
+    background: #17a2b8;
+    color: white;
+}
+
+.grade-badge.grade-3 {
+    background: #ffc107;
+    color: #333;
+}
+
+.grade-badge.grade-2 {
+    background: #fd7e14;
+    color: white;
+}
+
+.grade-badge.grade-1 {
+    background: #dc3545;
+    color: white;
+}
+
+.grade-badge.grade-0 {
+    background: #6c757d;
+    color: white;
+}
+
+/* Стили для предпросмотра комментариев */
+.comment-preview, .homework-preview {
+    background: #f8f9fa;
+    border-radius: 6px;
+    padding: 4px 8px;
+    margin-top: 2px;
+    border-left: 2px solid #667eea;
+    color: #495057;
+}
+
+/* Стили для секций карточки */
+.lesson-grades, .lesson-statuses {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.lesson-comment, .lesson-homework, .homework-comment {
+    margin-bottom: 8px;
+}
+
+/* Адаптивность для мобильных */
+@media (max-width: 768px) {
+    .lesson-card .row > div {
+        margin-bottom: 10px;
+    }
+    
+    .lesson-grades, .lesson-statuses {
+        justify-content: flex-start;
+    }
+}
+
+/* Улучшенные стили для карточки */
+.lesson-card {
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    border-left: 4px solid;
+    cursor: pointer;
+}
+
+.lesson-card:hover {
+    transform: translateX(5px);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+}
+
+.lesson-card.completed {
+    border-left-color: #28a745;
+    background: #f8fff9;
+}
+
+.lesson-card.cancelled {
+    border-left-color: #dc3545;
+    background: #fff8f8;
+    opacity: 0.8;
+}
+
+.lesson-card.planned {
+    border-left-color: #ffc107;
+}
+
+.lesson-date {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #333;
+}
+
+.lesson-time {
+    color: #667eea;
+    font-weight: 500;
+}
+
+.topic-badge {
+    background: #e9ecef;
+    border-radius: 15px;
+    padding: 2px 10px;
+    font-size: 0.8em;
+    display: inline-block;
+    margin-right: 5px;
+    margin-bottom: 5px;
+}
     </style>
 </head>
 <body>
@@ -1120,65 +1250,167 @@ if ($publicView) {
             </div>
             
             <!-- Список занятий по месяцам -->
-            <?php if (empty($lessons)): ?>
-                <div class="alert alert-info text-center py-5">
-                    <i class="bi bi-calendar-x" style="font-size: 3rem;"></i>
-                    <h4 class="mt-3">Занятия не найдены</h4>
-                    <p>Добавьте первое занятие, нажав кнопку "Добавить занятие"</p>
-                </div>
-            <?php else: ?>
-                <?php foreach ($groupedLessons as $month => $monthLessons): ?>
-                    <div class="month-header">
-                        <h4 class="mb-0"><?php echo date('F Y', strtotime($month . '-01')); ?></h4>
+            <!-- Список занятий по месяцам -->
+<?php if (empty($lessons)): ?>
+    <div class="alert alert-info text-center py-5">
+        <i class="bi bi-calendar-x" style="font-size: 3rem;"></i>
+        <h4 class="mt-3">Занятия не найдены</h4>
+        <p>Добавьте первое занятие, нажав кнопку "Добавить занятие"</p>
+    </div>
+<?php else: ?>
+    <?php foreach ($groupedLessons as $month => $monthLessons): ?>
+        <div class="month-header">
+            <h4 class="mb-0"><?php echo date('F Y', strtotime($month . '-01')); ?></h4>
+        </div>
+        
+        <?php foreach ($monthLessons as $lesson): 
+            $statusClass = $lesson['is_completed'] ? 'completed' : ($lesson['is_cancelled'] ? 'cancelled' : 'planned');
+            
+            // Получаем комментарий к ДЗ, если есть
+            $homeworkComment = !empty($lesson['homework_comment']) ? $lesson['homework_comment'] : '';
+            
+            // Получаем оценку за занятие и ДЗ
+            $gradeLesson = isset($lesson['grade_lesson']) && $lesson['grade_lesson'] !== '' ? $lesson['grade_lesson'] : null;
+            $gradeHomework = isset($lesson['grade_homework']) && $lesson['grade_homework'] !== '' ? $lesson['grade_homework'] : null;
+            
+            // Получаем комментарий к занятию
+            $lessonComment = !empty($lesson['comment']) ? $lesson['comment'] : '';
+            
+            // Получаем домашнее задание
+            $homework = !empty($lesson['homework_manual']) ? $lesson['homework_manual'] : '';
+        ?>
+            <div class="lesson-card <?php echo $statusClass; ?>" onclick="window.location.href='?action=edit&id=<?php echo $lesson['id']; ?>&diary_id=<?php echo $diaryId; ?>'">
+                <div class="row">
+                    <div class="col-md-2">
+                        <div class="lesson-date"><?php echo date('d.m.Y', strtotime($lesson['lesson_date'])); ?></div>
+                        <div class="lesson-time"><?php echo date('H:i', strtotime($lesson['start_time'])); ?></div>
+                        <div class="lesson-duration mt-1">
+                            <small class="text-muted">
+                                <i class="bi bi-clock"></i> <?php echo $lesson['duration']; ?> мин
+                            </small>
+                        </div>
                     </div>
                     
-                    <?php foreach ($monthLessons as $lesson): 
-                        $statusClass = $lesson['is_completed'] ? 'completed' : ($lesson['is_cancelled'] ? 'cancelled' : 'planned');
-                    ?>
-                        <div class="lesson-card <?php echo $statusClass; ?>" onclick="window.location.href='?action=edit&id=<?php echo $lesson['id']; ?>&diary_id=<?php echo $diaryId; ?>'">
-                            <div class="row">
-                                <div class="col-md-2">
-                                    <div class="lesson-date"><?php echo date('d.m.Y', strtotime($lesson['lesson_date'])); ?></div>
-                                    <div class="lesson-time"><?php echo date('H:i', strtotime($lesson['start_time'])); ?></div>
-                                </div>
-                                
-                                <div class="col-md-3">
-                                    <div><strong>Длительность:</strong> <?php echo $lesson['duration']; ?> мин</div>
-                                    <div><strong>Стоимость:</strong> <?php echo $lesson['cost'] ? number_format($lesson['cost'], 0, ',', ' ') . ' ₽' : '—'; ?></div>
-                                </div>
-                                
-                                <div class="col-md-4">
-                                    <?php if (!empty($lesson['topic_names'])): ?>
-                                        <div class="lesson-topics">
-                                            <?php 
-                                            $topics = explode(',', $lesson['topic_names']);
-                                            foreach (array_slice($topics, 0, 3) as $topic):
-                                            ?>
-                                                <span class="topic-badge"><?php echo htmlspecialchars(trim($topic)); ?></span>
-                                            <?php endforeach; ?>
-                                            <?php if (count($topics) > 3): ?>
-                                                <span class="topic-badge">+<?php echo count($topics) - 3; ?></span>
-                                            <?php endif; ?>
-                                        </div>
+                    <div class="col-md-3">
+                        <!-- Оценки -->
+                        <div class="lesson-grades mb-2">
+                            <?php if ($gradeLesson !== null): ?>
+                                <span class="grade-badge grade-<?php echo $gradeLesson; ?>" title="Оценка за занятие">
+                                    <i class="bi bi-star-fill"></i> <?php echo $gradeLesson; ?>/5
+                                </span>
+                            <?php endif; ?>
+                            
+                            <?php if ($gradeHomework !== null): ?>
+                                <span class="grade-badge grade-<?php echo $gradeHomework; ?>" title="Оценка за ДЗ">
+                                    <i class="bi bi-journal-check"></i> <?php echo $gradeHomework; ?>/5
+                                </span>
+                            <?php endif; ?>
+                        </div>
+                        
+                        <!-- Статусы -->
+                        <div class="lesson-statuses mb-2">
+                            <?php if ($lesson['is_completed']): ?>
+                                <span class="badge bg-success"><i class="bi bi-check-circle"></i> Проведено</span>
+                            <?php elseif ($lesson['is_cancelled']): ?>
+                                <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Отменено</span>
+                            <?php else: ?>
+                                <span class="badge bg-warning"><i class="bi bi-clock"></i> Запланировано</span>
+                            <?php endif; ?>
+                            
+                            <?php if ($lesson['is_paid']): ?>
+                                <span class="badge bg-info"><i class="bi bi-currency-ruble"></i> Оплачено</span>
+                            <?php endif; ?>
+                        </div>
+                        
+                        <!-- Стоимость (теперь внизу карточки) -->
+                        <?php if ($lesson['cost']): ?>
+                            <div class="lesson-cost text-muted small">
+                                <i class="bi bi-currency-ruble"></i> <?php echo number_format($lesson['cost'], 0, ',', ' '); ?> ₽
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <!-- Темы занятия -->
+                        <?php if (!empty($lesson['topic_names'])): ?>
+                            <div class="lesson-topics mb-2">
+                                <small class="text-muted"><i class="bi bi-book"></i> Темы:</small>
+                                <div class="mt-1">
+                                    <?php 
+                                    $topics = explode(',', $lesson['topic_names']);
+                                    foreach (array_slice($topics, 0, 2) as $topic):
+                                    ?>
+                                        <span class="topic-badge"><?php echo htmlspecialchars(trim($topic)); ?></span>
+                                    <?php endforeach; ?>
+                                    <?php if (count($topics) > 2): ?>
+                                        <span class="topic-badge">+<?php echo count($topics) - 2; ?></span>
                                     <?php endif; ?>
                                 </div>
-                                
-                                <div class="col-md-3">
-                                    <div class="lesson-meta">
-                                        <span><i class="bi bi-tag"></i> <?php echo $lesson['resources_count'] ?? 0; ?></span>
-                                        <?php if ($lesson['is_paid']): ?>
-                                            <span class="text-success"><i class="bi bi-check-circle"></i> Оплачено</span>
-                                        <?php endif; ?>
-                                        <?php if ($lesson['grade_lesson'] !== null): ?>
-                                            <span>Оценка: <?php echo $lesson['grade_lesson']; ?>/5</span>
-                                        <?php endif; ?>
-                                    </div>
+                            </div>
+                        <?php endif; ?>
+                        
+                        <!-- Комментарий к занятию -->
+                        <?php if (!empty($lessonComment)): ?>
+                            <div class="lesson-comment mb-2">
+                                <small class="text-muted"><i class="bi bi-chat"></i> Комментарий:</small>
+                                <div class="comment-preview small">
+                                    <?php echo nl2br(htmlspecialchars(substr($lessonComment, 0, 50) . (strlen($lessonComment) > 50 ? '...' : ''))); ?>
                                 </div>
                             </div>
+                        <?php endif; ?>
+                        
+                        <!-- Домашнее задание -->
+                        <?php if (!empty($homework)): ?>
+                            <div class="lesson-homework mb-2">
+                                <small class="text-muted"><i class="bi bi-journal-text"></i> ДЗ:</small>
+                                <div class="homework-preview small">
+                                    <?php echo nl2br(htmlspecialchars(substr($homework, 0, 50) . (strlen($homework) > 50 ? '...' : ''))); ?>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                        
+                        <!-- Комментарий к ДЗ -->
+                        <?php if (!empty($homeworkComment)): ?>
+                            <div class="homework-comment">
+                                <small class="text-muted"><i class="bi bi-chat-dots"></i> Комм. к ДЗ:</small>
+                                <div class="comment-preview small">
+                                    <?php echo nl2br(htmlspecialchars(substr($homeworkComment, 0, 50) . (strlen($homeworkComment) > 50 ? '...' : ''))); ?>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <!-- Ресурсы -->
+                        <?php if ($lesson['resources_count'] > 0): ?>
+                            <div class="lesson-resources mb-2">
+                                <small class="text-muted"><i class="bi bi-link"></i> Ресурсы: <?php echo $lesson['resources_count']; ?></small>
+                            </div>
+                        <?php endif; ?>
+                        
+                        <!-- Ссылка на ресурс -->
+                        <?php if (!empty($lesson['link_url'])): ?>
+                            <div class="lesson-link mb-2">
+                                <small class="text-muted"><i class="bi bi-box-arrow-up-right"></i> 
+                                    <a href="<?php echo htmlspecialchars($lesson['link_url']); ?>" target="_blank" class="text-decoration-none">
+                                        <?php echo htmlspecialchars(substr($lesson['link_url'], 0, 20) . '...'); ?>
+                                    </a>
+                                </small>
+                            </div>
+                        <?php endif; ?>
+                        
+                        <!-- Мета-информация -->
+                        <div class="lesson-meta mt-2">
+                            <small class="text-muted">
+                                <i class="bi bi-tag"></i> Ресурсов: <?php echo $lesson['resources_count'] ?? 0; ?>
+                            </small>
                         </div>
-                    <?php endforeach; ?>
-                <?php endforeach; ?>
-            <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    <?php endforeach; ?>
+<?php endif; ?>
         <?php endif; ?>
     </div>
     
