@@ -843,6 +843,50 @@ $currentTab = $_GET['tab'] ?? 'info';
                 width: 150px;
             }
         }
+
+        /* Стили для кнопок вставки строк */
+        .insert-row-btn {
+            text-align: center;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin: 5px 0;
+            padding: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px dashed #dee2e6;
+            color: #6c757d;
+        }
+
+        .insert-row-btn:hover {
+            background: #e9ecef;
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        .insert-row-btn i {
+            font-size: 1.2em;
+        }
+
+        .row-actions {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+        }
+
+        .row-action-btn {
+            cursor: pointer;
+            color: #6c757d;
+            transition: color 0.2s;
+            font-size: 1.1em;
+        }
+
+        .row-action-btn:hover {
+            color: #667eea;
+        }
+
+        .row-action-btn.delete:hover {
+            color: #dc3545;
+        }
     </style>
 </head>
 
@@ -1220,7 +1264,7 @@ $currentTab = $_GET['tab'] ?? 'info';
                                 <form method="POST" action="" id="rowsForm">
                                     <div class="mb-3">
                                         <button type="button" class="btn btn-success" onclick="addRow()">
-                                            <i class="bi bi-plus-circle"></i> Добавить строку
+                                            <i class="bi bi-plus-circle"></i> Добавить строку в конец
                                         </button>
                                         <button type="button" class="btn btn-warning" onclick="exportToCSV()">
                                             <i class="bi bi-filetype-csv"></i> Экспорт в CSV
@@ -1232,12 +1276,12 @@ $currentTab = $_GET['tab'] ?? 'info';
                                             <thead>
                                                 <tr>
                                                     <th style="width: 5%">№</th>
-                                                    <th style="width: 10%">Дата</th>
-                                                    <th style="width: 25%">Темы</th>
-                                                    <th style="width: 25%">Ресурсы</th>
+                                                    <th style="width: 8%">Дата</th>
+                                                    <th style="width: 22%">Темы</th>
+                                                    <th style="width: 22%">Ресурсы</th>
                                                     <th style="width: 20%">Домашнее задание</th>
-                                                    <th style="width: 10%">Примечание</th>
-                                                    <th style="width: 5%"></th>
+                                                    <th style="width: 13%">Примечание</th>
+                                                    <th style="width: 10%">Действия</th>
                                                 </tr>
                                             </thead>
                                             <tbody id="rowsBody">
@@ -1268,30 +1312,28 @@ $currentTab = $_GET['tab'] ?? 'info';
                                                                     <?php foreach ($selectedTopicIds as $topicId): ?>
                                                                         <?php if (!empty($topicId)): ?>
                                                                             <?php
-                                                                            $topicName = $topicNames[$topicId] ?? 'Тема';
-                                                                            $topicColor = $topicColors[$topicId] ?? '#808080';
-
-                                                                            // Получаем название категории для этой темы
-                                                                            $categoryName = 'Без категории';
-                                                                            foreach ($allTopics as $topic) {
-                                                                                if ($topic['id'] == $topicId) {
-                                                                                    $categoryName = $topic['category_name'] ?? 'Без категории';
-                                                                                    break;
-                                                                                }
-                                                                            }
-                                                                            ?>
-                                                                            <span class="topic-badge"
-                                                                                style="border-left-color: <?php echo $topicColor; ?>; background-color: <?php echo $topicColor; ?>20;"
-                                                                                data-bs-toggle="tooltip" data-bs-placement="top"
-                                                                                title="<?php echo htmlspecialchars($categoryName); ?>">
-                                                                                <?php echo htmlspecialchars($topicName); ?>
-                                                                                <input type="hidden"
-                                                                                    name="rows[<?php echo $index; ?>][topics][]"
-                                                                                    value="<?php echo $topicId; ?>">
-                                                                                <i class="bi bi-x-circle-fill ms-1"
-                                                                                    style="cursor: pointer; color: #666;"
-                                                                                    onclick="removeTopic(this, <?php echo $index; ?>, <?php echo $topicId; ?>)"></i>
-                                                                            </span>
+                                                                            $topic = array_filter($allTopics, function ($t) use ($topicId) {
+                                                                                return $t['id'] == $topicId;
+                                                                            });
+                                                                            $topic = reset($topic);
+                                                                            if ($topic):
+                                                                                $categoryName = $topic['category_name'] ?? 'Без категории';
+                                                                                $categoryColor = $topic['category_color'] ?? '#808080';
+                                                                                ?>
+                                                                                <span class="topic-badge"
+                                                                                    style="border-left-color: <?php echo $categoryColor; ?>; background-color: <?php echo $categoryColor; ?>20;"
+                                                                                    data-category="<?php echo htmlspecialchars($categoryName); ?>">
+                                                                                    <?php echo htmlspecialchars($topic['name']); ?>
+                                                                                    <span
+                                                                                        class="tooltip-text"><?php echo htmlspecialchars($categoryName); ?></span>
+                                                                                    <input type="hidden"
+                                                                                        name="rows[<?php echo $index; ?>][topics][]"
+                                                                                        value="<?php echo $topicId; ?>">
+                                                                                    <i class="bi bi-x-circle-fill ms-1"
+                                                                                        style="cursor: pointer; color: #666;"
+                                                                                        onclick="removeTopic(this, <?php echo $index; ?>, <?php echo $topicId; ?>)"></i>
+                                                                                </span>
+                                                                            <?php endif; ?>
                                                                         <?php endif; ?>
                                                                     <?php endforeach; ?>
                                                                 </div>
@@ -1346,16 +1388,33 @@ $currentTab = $_GET['tab'] ?? 'info';
                                                                     value="<?php echo htmlspecialchars($row['notes']); ?>">
                                                             </td>
                                                             <td>
-                                                                <i class="bi bi-x-circle-fill remove-row" onclick="removeRow(this)"></i>
+                                                                <div class="row-actions">
+                                                                    <span class="row-action-btn" title="Вставить сверху"
+                                                                        onclick="insertRowBefore(this)">
+                                                                        <i class="bi bi-arrow-up-short"></i>
+                                                                    </span>
+                                                                    <span class="row-action-btn" title="Вставить снизу"
+                                                                        onclick="insertRowAfter(this)">
+                                                                        <i class="bi bi-arrow-down-short"></i>
+                                                                    </span>
+                                                                    <span class="row-action-btn delete" title="Удалить"
+                                                                        onclick="removeRow(this)">
+                                                                        <i class="bi bi-x-circle"></i>
+                                                                    </span>
+                                                                </div>
                                                             </td>
                                                         </tr>
                                                     <?php endforeach; ?>
                                                 <?php else: ?>
                                                     <tr class="planning-row" data-index="0">
-                                                        <td><input type="number" name="rows[0][lesson_number]"
-                                                                class="form-control form-control-sm" value="1" min="1"></td>
-                                                        <td><input type="date" name="rows[0][lesson_date]"
-                                                                class="form-control form-control-sm"></td>
+                                                        <td>
+                                                            <input type="number" name="rows[0][lesson_number]"
+                                                                class="form-control form-control-sm" value="1" min="1">
+                                                        </td>
+                                                        <td>
+                                                            <input type="date" name="rows[0][lesson_date]"
+                                                                class="form-control form-control-sm">
+                                                        </td>
                                                         <td>
                                                             <div class="mb-2">
                                                                 <button type="button" class="btn btn-sm btn-outline-primary"
@@ -1380,11 +1439,29 @@ $currentTab = $_GET['tab'] ?? 'info';
                                                                 class="form-control form-control-sm"
                                                                 placeholder="Или введите вручную..."></textarea>
                                                         </td>
-                                                        <td><textarea name="rows[0][homework]" class="form-control form-control-sm"
-                                                                rows="2"></textarea></td>
-                                                        <td><input type="text" name="rows[0][notes]"
-                                                                class="form-control form-control-sm"></td>
-                                                        <td><i class="bi bi-x-circle-fill remove-row" onclick="removeRow(this)"></i>
+                                                        <td>
+                                                            <textarea name="rows[0][homework]" class="form-control form-control-sm"
+                                                                rows="2"></textarea>
+                                                        </td>
+                                                        <td>
+                                                            <input type="text" name="rows[0][notes]"
+                                                                class="form-control form-control-sm">
+                                                        </td>
+                                                        <td>
+                                                            <div class="row-actions">
+                                                                <span class="row-action-btn" title="Вставить сверху"
+                                                                    onclick="insertRowBefore(this)">
+                                                                    <i class="bi bi-arrow-up-short"></i>
+                                                                </span>
+                                                                <span class="row-action-btn" title="Вставить снизу"
+                                                                    onclick="insertRowAfter(this)">
+                                                                    <i class="bi bi-arrow-down-short"></i>
+                                                                </span>
+                                                                <span class="row-action-btn delete" title="Удалить"
+                                                                    onclick="removeRow(this)">
+                                                                    <i class="bi bi-x-circle"></i>
+                                                                </span>
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 <?php endif; ?>
@@ -1401,6 +1478,7 @@ $currentTab = $_GET['tab'] ?? 'info';
                                         </button>
                                     </div>
                                 </form>
+
 
                             <?php elseif ($currentTab == 'history' && $action === 'edit'): ?>
                                 <!-- История изменений -->
@@ -1851,48 +1929,179 @@ $currentTab = $_GET['tab'] ?? 'info';
         let currentRowIndex = 0;
         let rowIndex = <?php echo !empty($planningRows) ? count($planningRows) : 1; ?>;
 
-        // Функции для работы со строками
+
+        // Функция для добавления строки в конец
         function addRow() {
             const tbody = document.getElementById('rowsBody');
-            const newRow = document.createElement('tr');
-            newRow.className = 'planning-row';
-            newRow.dataset.index = rowIndex;
-            newRow.innerHTML = `
-                <td><input type="number" name="rows[${rowIndex}][lesson_number]" class="form-control form-control-sm" value="${rowIndex + 1}" min="1"></td>
-                <td><input type="date" name="rows[${rowIndex}][lesson_date]" class="form-control form-control-sm"></td>
-                <td>
-                    <div class="mb-2">
-                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="openTopicsModal(${rowIndex})">
-                            <i class="bi bi-plus-circle"></i> Выбрать темы
-                        </button>
-                    </div>
-                    <div id="topics-container-${rowIndex}" class="mb-2"></div>
-                    <textarea name="rows[${rowIndex}][topics_text]" class="form-control form-control-sm" placeholder="Или введите вручную..."></textarea>
-                </td>
-                <td>
-                    <div class="mb-2">
-                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="openResourcesModal(${rowIndex})">
-                            <i class="bi bi-plus-circle"></i> Выбрать ресурсы
-                        </button>
-                    </div>
-                    <div id="resources-container-${rowIndex}" class="mb-2"></div>
-                    <textarea name="rows[${rowIndex}][resources_text]" class="form-control form-control-sm" placeholder="Или введите вручную..."></textarea>
-                </td>
-                <td><textarea name="rows[${rowIndex}][homework]" class="form-control form-control-sm" rows="2"></textarea></td>
-                <td><input type="text" name="rows[${rowIndex}][notes]" class="form-control form-control-sm"></td>
-                <td><i class="bi bi-x-circle-fill remove-row" onclick="removeRow(this)"></i></td>
-            `;
-            tbody.appendChild(newRow);
+            insertRowAtPosition(tbody.children.length);
+        }
+
+        // Функция для вставки строки после указанной позиции
+        function insertRowAfter(button) {
+            const row = button.closest('tr');
+            const tbody = row.parentNode;
+            const rowIndex = Array.from(tbody.children).indexOf(row);
+            insertRowAtPosition(rowIndex + 1);
+        }
+
+        // Функция для вставки строки перед указанной позицией
+        function insertRowBefore(button) {
+            const row = button.closest('tr');
+            const tbody = row.parentNode;
+            const rowIndex = Array.from(tbody.children).indexOf(row);
+            insertRowAtPosition(rowIndex);
+        }
+
+        // Основная функция вставки строки
+        function insertRowAtPosition(position) {
+            const tbody = document.getElementById('rowsBody');
+            const newRow = createNewRow(rowIndex);
+
+            if (position >= tbody.children.length) {
+                tbody.appendChild(newRow);
+            } else {
+                tbody.insertBefore(newRow, tbody.children[position]);
+            }
+
+            // Перенумеровываем все строки
+            renumberRows();
             rowIndex++;
         }
 
+        // Функция создания новой строки
+        // Функция создания новой строки
+        function createNewRow(index) {
+            const tr = document.createElement('tr');
+            tr.className = 'planning-row';
+            tr.dataset.index = index;
+            tr.innerHTML = `
+        <td>
+            <input type="number" name="rows[${index}][lesson_number]" class="form-control form-control-sm" value="${index + 1}" min="1">
+        </td>
+        <td>
+            <input type="date" name="rows[${index}][lesson_date]" class="form-control form-control-sm">
+        </td>
+        <td>
+            <div class="mb-2">
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="openTopicsModal(${index})">
+                    <i class="bi bi-plus-circle"></i> Выбрать темы
+                </button>
+            </div>
+            <div id="topics-container-${index}" class="mb-2"></div>
+            <textarea name="rows[${index}][topics_text]" class="form-control form-control-sm" placeholder="Или введите вручную..."></textarea>
+        </td>
+        <td>
+            <div class="mb-2">
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="openResourcesModal(${index})">
+                    <i class="bi bi-plus-circle"></i> Выбрать ресурсы
+                </button>
+            </div>
+            <div id="resources-container-${index}" class="mb-2"></div>
+            <textarea name="rows[${index}][resources_text]" class="form-control form-control-sm" placeholder="Или введите вручную..."></textarea>
+        </td>
+        <td>
+            <textarea name="rows[${index}][homework]" class="form-control form-control-sm" rows="2"></textarea>
+        </td>
+        <td>
+            <input type="text" name="rows[${index}][notes]" class="form-control form-control-sm">
+        </td>
+        <td>
+            <div class="row-actions">
+                <span class="row-action-btn" title="Вставить сверху" onclick="insertRowBefore(this)">
+                    <i class="bi bi-arrow-up-short"></i>
+                </span>
+                <span class="row-action-btn" title="Вставить снизу" onclick="insertRowAfter(this)">
+                    <i class="bi bi-arrow-down-short"></i>
+                </span>
+                <span class="row-action-btn delete" title="Удалить" onclick="removeRow(this)">
+                    <i class="bi bi-x-circle"></i>
+                </span>
+            </div>
+        </td>
+    `;
+            return tr;
+        }
+
+        // Функция для перенумерации строк
+        function renumberRows() {
+            const rows = document.querySelectorAll('#rowsBody .planning-row');
+            rows.forEach((row, idx) => {
+                // Обновляем номер занятия
+                const numberInput = row.querySelector('input[name$="[lesson_number]"]');
+                if (numberInput) {
+                    numberInput.value = idx + 1;
+                }
+
+                // Обновляем индексы в name атрибутах
+                updateRowIndices(row, idx);
+            });
+        }
+
+        // Функция для обновления индексов в name атрибутах
+        // Функция для обновления индексов в name атрибутах и onclick обработчиках
+        function updateRowIndices(row, newIndex) {
+            // Обновляем все элементы с name атрибутами
+            const inputs = row.querySelectorAll('[name]');
+            inputs.forEach(input => {
+                const name = input.getAttribute('name');
+                const newName = name.replace(/rows\[\d+\]/, `rows[${newIndex}]`);
+                input.setAttribute('name', newName);
+            });
+
+            // Обновляем ID контейнеров
+            const topicsContainer = row.querySelector('[id^="topics-container-"]');
+            if (topicsContainer) {
+                topicsContainer.id = `topics-container-${newIndex}`;
+            }
+
+            const resourcesContainer = row.querySelector('[id^="resources-container-"]');
+            if (resourcesContainer) {
+                resourcesContainer.id = `resources-container-${newIndex}`;
+            }
+
+            // Обновляем onclick обработчики для кнопок выбора тем
+            const topicsButton = row.querySelector('button[onclick*="openTopicsModal"]');
+            if (topicsButton) {
+                topicsButton.setAttribute('onclick', `openTopicsModal(${newIndex})`);
+            }
+
+            // Обновляем onclick обработчики для кнопок выбора ресурсов
+            const resourcesButton = row.querySelector('button[onclick*="openResourcesModal"]');
+            if (resourcesButton) {
+                resourcesButton.setAttribute('onclick', `openResourcesModal(${newIndex})`);
+            }
+
+            // Обновляем onclick обработчики для кнопок удаления тем
+            const removeTopicButtons = row.querySelectorAll('[onclick*="removeTopic"]');
+            removeTopicButtons.forEach(btn => {
+                const match = btn.getAttribute('onclick').match(/removeTopic\(this, \d+, (\d+)\)/);
+                if (match) {
+                    const topicId = match[1];
+                    btn.setAttribute('onclick', `removeTopic(this, ${newIndex}, ${topicId})`);
+                }
+            });
+
+            // Обновляем onclick обработчики для кнопок удаления ресурсов
+            const removeResourceButtons = row.querySelectorAll('[onclick*="removeResource"]');
+            removeResourceButtons.forEach(btn => {
+                const match = btn.getAttribute('onclick').match(/removeResource\(this, \d+, (\d+)\)/);
+                if (match) {
+                    const resourceId = match[1];
+                    btn.setAttribute('onclick', `removeResource(this, ${newIndex}, ${resourceId})`);
+                }
+            });
+        }
+
+        // Обновленная функция удаления строки
         function removeRow(element) {
             if (confirm('Удалить строку?')) {
                 const row = element.closest('tr');
                 row.remove();
+                renumberRows();
             }
         }
 
+        // Функции для работы с темами
         // Функции для работы с темами
         function openTopicsModal(rowIdx) {
             currentRowIndex = rowIdx;
@@ -1902,20 +2111,60 @@ $currentTab = $_GET['tab'] ?? 'info';
             document.getElementById('topicSearch').value = '';
             document.getElementById('topicCategoryFilter').value = '';
 
-            // Отмечаем уже выбранные темы
+            // Отмечаем уже выбранные темы для текущей строки
             const container = document.getElementById(`topics-container-${rowIdx}`);
-            const selectedInputs = container.querySelectorAll('input[name^="rows"][name$="[topics][]"]');
-            const selectedIds = Array.from(selectedInputs).map(input => input.value);
+            if (container) {
+                const selectedInputs = container.querySelectorAll('input[name^="rows"][name$="[topics][]"]');
+                const selectedIds = Array.from(selectedInputs).map(input => input.value);
 
-            document.querySelectorAll('#topicsList .topic-checkbox').forEach(cb => {
-                cb.checked = selectedIds.includes(cb.value);
-            });
+                document.querySelectorAll('#topicsList .topic-checkbox').forEach(cb => {
+                    cb.checked = selectedIds.includes(cb.value);
+                });
+            } else {
+                // Если контейнер не найден, снимаем все отметки
+                document.querySelectorAll('#topicsList .topic-checkbox').forEach(cb => {
+                    cb.checked = false;
+                });
+            }
+
+            modal.show();
+        }
+
+        // Функции для работы с ресурсами
+        function openResourcesModal(rowIdx) {
+            currentRowIndex = rowIdx;
+            const modal = new bootstrap.Modal(document.getElementById('resourcesModal'));
+
+            // Сбрасываем фильтры
+            document.getElementById('resourceSearch').value = '';
+            document.getElementById('resourceTypeFilter').value = '';
+
+            // Отмечаем уже выбранные ресурсы для текущей строки
+            const container = document.getElementById(`resources-container-${rowIdx}`);
+            if (container) {
+                const selectedInputs = container.querySelectorAll('input[name^="rows"][name$="[resources][]"]');
+                const selectedIds = Array.from(selectedInputs).map(input => input.value);
+
+                document.querySelectorAll('#resourcesList .resource-checkbox').forEach(cb => {
+                    cb.checked = selectedIds.includes(cb.value);
+                });
+            } else {
+                // Если контейнер не найден, снимаем все отметки
+                document.querySelectorAll('#resourcesList .resource-checkbox').forEach(cb => {
+                    cb.checked = false;
+                });
+            }
 
             modal.show();
         }
 
         function applyTopicsSelection() {
             const container = document.getElementById(`topics-container-${currentRowIndex}`);
+            if (!container) {
+                console.error('Container not found for index:', currentRowIndex);
+                return;
+            }
+
             container.innerHTML = '';
 
             document.querySelectorAll('#topicsList .topic-checkbox:checked').forEach(cb => {
@@ -1954,28 +2203,15 @@ $currentTab = $_GET['tab'] ?? 'info';
             }
         }
         // Функции для работы с ресурсами
-        function openResourcesModal(rowIdx) {
-            currentRowIndex = rowIdx;
-            const modal = new bootstrap.Modal(document.getElementById('resourcesModal'));
 
-            // Сбрасываем фильтры
-            document.getElementById('resourceSearch').value = '';
-            document.getElementById('resourceTypeFilter').value = '';
-
-            // Отмечаем уже выбранные ресурсы
-            const container = document.getElementById(`resources-container-${rowIdx}`);
-            const selectedInputs = container.querySelectorAll('input[name^="rows"][name$="[resources][]"]');
-            const selectedIds = Array.from(selectedInputs).map(input => input.value);
-
-            document.querySelectorAll('#resourcesList .resource-checkbox').forEach(cb => {
-                cb.checked = selectedIds.includes(cb.value);
-            });
-
-            modal.show();
-        }
 
         function applyResourcesSelection() {
             const container = document.getElementById(`resources-container-${currentRowIndex}`);
+            if (!container) {
+                console.error('Container not found for index:', currentRowIndex);
+                return;
+            }
+
             container.innerHTML = '';
 
             document.querySelectorAll('#resourcesList .resource-checkbox:checked').forEach(cb => {
@@ -1987,13 +2223,13 @@ $currentTab = $_GET['tab'] ?? 'info';
                 const div = document.createElement('div');
                 div.className = 'resource-item selected';
                 div.innerHTML = `
-                    <span>
-                        <i class="bi bi-link"></i>
-                        ${description}
-                    </span>
-                    <input type="hidden" name="rows[${currentRowIndex}][resources][]" value="${resourceId}">
-                    <i class="bi bi-x-circle-fill" style="cursor: pointer;" onclick="removeResource(this, ${currentRowIndex}, ${resourceId})"></i>
-                `;
+            <span>
+                <i class="bi bi-link"></i>
+                ${description}
+            </span>
+            <input type="hidden" name="rows[${currentRowIndex}][resources][]" value="${resourceId}">
+            <i class="bi bi-x-circle-fill" style="cursor: pointer;" onclick="removeResource(this, ${currentRowIndex}, ${resourceId})"></i>
+        `;
                 container.appendChild(div);
             });
 
@@ -2008,9 +2244,15 @@ $currentTab = $_GET['tab'] ?? 'info';
         document.getElementById('topicSearch')?.addEventListener('input', filterTopics);
         document.getElementById('topicCategoryFilter')?.addEventListener('change', filterTopics);
 
+        // Фильтрация тем
         function filterTopics() {
-            const search = document.getElementById('topicSearch').value.toLowerCase();
-            const category = document.getElementById('topicCategoryFilter').value;
+            const searchInput = document.getElementById('topicSearch');
+            const categoryFilter = document.getElementById('topicCategoryFilter');
+
+            if (!searchInput || !categoryFilter) return;
+
+            const search = searchInput.value.toLowerCase();
+            const category = categoryFilter.value;
 
             document.querySelectorAll('#topicsList .topic-item').forEach(item => {
                 let show = true;
@@ -2020,6 +2262,31 @@ $currentTab = $_GET['tab'] ?? 'info';
                 }
 
                 if (category && item.dataset.category != category) {
+                    show = false;
+                }
+
+                item.style.display = show ? 'block' : 'none';
+            });
+        }
+
+        // Фильтрация ресурсов
+        function filterResources() {
+            const searchInput = document.getElementById('resourceSearch');
+            const typeFilter = document.getElementById('resourceTypeFilter');
+
+            if (!searchInput || !typeFilter) return;
+
+            const search = searchInput.value.toLowerCase();
+            const type = typeFilter.value;
+
+            document.querySelectorAll('#resourcesList .resource-item').forEach(item => {
+                let show = true;
+
+                if (search && !item.dataset.name.includes(search)) {
+                    show = false;
+                }
+
+                if (type && item.dataset.type != type) {
                     show = false;
                 }
 
@@ -2051,6 +2318,7 @@ $currentTab = $_GET['tab'] ?? 'info';
         }
 
         // Экспорт в CSV
+        // Обновленная функция экспорта в CSV
         function exportToCSV() {
             const rows = [];
             const headers = ['Номер занятия', 'Дата', 'Темы', 'Ресурсы', 'Домашнее задание', 'Примечание'];
@@ -2060,11 +2328,11 @@ $currentTab = $_GET['tab'] ?? 'info';
                 const rowData = [];
 
                 // Номер занятия
-                const lessonNumber = row.querySelector('input[name^="rows"][name$="[lesson_number]"]')?.value || '';
+                const lessonNumber = row.querySelector('input[name$="[lesson_number]"]')?.value || '';
                 rowData.push(lessonNumber);
 
                 // Дата
-                const lessonDate = row.querySelector('input[name^="rows"][name$="[lesson_date]"]')?.value || '';
+                const lessonDate = row.querySelector('input[name$="[lesson_date]"]')?.value || '';
                 if (lessonDate) {
                     const date = new Date(lessonDate);
                     rowData.push(date.toLocaleDateString('ru-RU'));
@@ -2074,21 +2342,26 @@ $currentTab = $_GET['tab'] ?? 'info';
 
                 // Темы (выбранные + текст)
                 const topicsContainer = row.querySelector('[id^="topics-container-"]');
-                const selectedTopics = topicsContainer ? Array.from(topicsContainer.querySelectorAll('input')).map(inp => inp.closest('.topic-badge')?.innerText.trim() || '').filter(t => t).join(', ') : '';
-                const topicsText = row.querySelector('textarea[name^="rows"][name$="[topics_text]"]')?.value || '';
+                const selectedTopics = topicsContainer ? Array.from(topicsContainer.querySelectorAll('.topic-badge')).map(badge => {
+                    // Получаем текст без иконок и скрытых полей
+                    const text = badge.childNodes[0]?.nodeValue?.trim() || '';
+                    return text;
+                }).filter(t => t).join(', ') : '';
+
+                const topicsText = row.querySelector('textarea[name$="[topics_text]"]')?.value || '';
                 rowData.push([selectedTopics, topicsText].filter(Boolean).join('; '));
 
                 // Ресурсы (выбранные + текст)
                 const resourcesContainer = row.querySelector('[id^="resources-container-"]');
                 const selectedResources = resourcesContainer ? Array.from(resourcesContainer.querySelectorAll('.resource-item span')).map(span => span.innerText.trim()).join(', ') : '';
-                const resourcesText = row.querySelector('textarea[name^="rows"][name$="[resources_text]"]')?.value || '';
+                const resourcesText = row.querySelector('textarea[name$="[resources_text]"]')?.value || '';
                 rowData.push([selectedResources, resourcesText].filter(Boolean).join('; '));
 
                 // ДЗ
-                rowData.push(row.querySelector('textarea[name^="rows"][name$="[homework]"]')?.value || '');
+                rowData.push(row.querySelector('textarea[name$="[homework]"]')?.value || '');
 
                 // Примечание
-                rowData.push(row.querySelector('input[name^="rows"][name$="[notes]"]')?.value || '');
+                rowData.push(row.querySelector('input[name$="[notes]"]')?.value || '');
 
                 rows.push(rowData.map(cell => cell.replace(/;/g, ',')).join(';'));
             });
@@ -2101,12 +2374,28 @@ $currentTab = $_GET['tab'] ?? 'info';
             link.click();
         }
 
-        // Инициализация Bootstrap тултипов
+
+        // Инициализация при загрузке страницы
         document.addEventListener('DOMContentLoaded', function () {
+            // Инициализация Bootstrap тултипов
             var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
             var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
                 return new bootstrap.Tooltip(tooltipTriggerEl);
             });
+
+            // Проверяем, что все необходимые элементы существуют
+            console.log('Planning page initialized');
+
+            // Обновляем фильтры для модальных окон
+            const topicSearch = document.getElementById('topicSearch');
+            const topicCategoryFilter = document.getElementById('topicCategoryFilter');
+            const resourceSearch = document.getElementById('resourceSearch');
+            const resourceTypeFilter = document.getElementById('resourceTypeFilter');
+
+            if (topicSearch) topicSearch.addEventListener('input', filterTopics);
+            if (topicCategoryFilter) topicCategoryFilter.addEventListener('change', filterTopics);
+            if (resourceSearch) resourceSearch.addEventListener('input', filterResources);
+            if (resourceTypeFilter) resourceTypeFilter.addEventListener('change', filterResources);
         });
     </script>
 </body>
