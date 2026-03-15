@@ -28,7 +28,7 @@ $students = $stmt->fetchAll();
 
 // Генерация публичной ссылки
 if (isset($_GET['generate_link']) && $diaryId) {
-    $publicLink = generatePublicLink();
+    $publicLink = bin2hex(random_bytes(16));
     $stmt = $pdo->prepare("UPDATE diaries SET public_link = ? WHERE id = ? AND user_id = ?");
     if ($stmt->execute([$publicLink, $diaryId, $userId])) {
         header('Location: diaries.php?action=view&id=' . $diaryId . '&message=link_generated');
@@ -688,6 +688,7 @@ if ($publicView) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Дневники - Дневник репетитора</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <style>
@@ -1246,27 +1247,33 @@ if ($publicView) {
                                 <p>Комментариев: <?php echo count($diaryComments); ?></p>
                                 <p>Создан: <?php echo date('d.m.Y H:i', strtotime($editDiary['created_at'])); ?></p>
                                 <p>Обновлен: <?php echo date('d.m.Y H:i', strtotime($editDiary['updated_at'])); ?></p>
-                                
                                 <?php if ($editDiary['public_link']): ?>
-                                    <hr>
-                                    <p><strong>Публичная ссылка:</strong></p>
-                                    <div class="input-group mb-2">
-                                        <input type="text" class="form-control form-control-sm" 
-                                               value="<?php echo $_SERVER['REQUEST_SCHEME'] . '://' . $_SERVER['HTTP_HOST'] . '/diaries.php?public=1&token=' . $editDiary['public_link']; ?>" 
-                                               id="publicLink" readonly>
-                                        <button class="btn btn-sm btn-outline-primary copy-link-btn" type="button" onclick="copyPublicLink()">
-                                            <i class="bi bi-files"></i>
-                                        </button>
-                                    </div>
-                                    <a href="?remove_link=1&id=<?php echo $editDiary['id']; ?>" class="btn btn-sm btn-outline-danger" 
-                                       onclick="return confirm('Удалить публичную ссылку?')">
-                                        <i class="bi bi-link-45deg"></i> Удалить ссылку
-                                    </a>
-                                <?php else: ?>
-                                    <a href="?generate_link=1&id=<?php echo $editDiary['id']; ?>" class="btn btn-sm btn-outline-success">
-                                        <i class="bi bi-link-45deg"></i> Сгенерировать публичную ссылку
-                                    </a>
-                                <?php endif; ?>
+    <hr>
+    <p><strong>Публичная ссылка:</strong></p>
+<div class="input-group">
+        <?php
+        // Определяем базовый URL с учетом подпапки
+        $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://';
+        $host = $_SERVER['HTTP_HOST'];
+        $scriptPath = dirname($_SERVER['SCRIPT_NAME']);
+        // Убираем последний слеш, если есть
+        $basePath = rtrim($scriptPath, '/');
+        
+        $publicUrl = $protocol . $host . $basePath . '/public_diary.php?token=' . $editDiary['public_link'];
+        ?>
+        <input type="text" class="form-control" 
+               value="<?php echo $publicUrl; ?>" 
+               id="publicLink" readonly>
+        <button class="btn btn-outline-primary copy-link-btn" type="button" onclick="copyPublicLink()">
+            <i class="bi bi-files"></i> Копировать
+        </button>
+    </div>
+    <small class="text-muted">
+        <i class="bi bi-info-circle"></i> 
+        По этой ссылке ученик может просматривать дневник без авторизации
+    </small>
+<?php endif; ?>
+
                             <?php endif; ?>
                         </div>
                     </div>
@@ -1537,22 +1544,22 @@ if ($publicView) {
     </div>
     
     <script>
-        function copyPublicLink() {
-            const linkInput = document.getElementById('publicLink');
-            linkInput.select();
-            document.execCommand('copy');
-            
-            // Показываем уведомление
-            const alert = document.createElement('div');
-            alert.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 end-0 m-3';
-            alert.style.zIndex = '9999';
-            alert.innerHTML = 'Ссылка скопирована! <button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
-            document.body.appendChild(alert);
-            
-            setTimeout(() => {
-                alert.remove();
-            }, 3000);
-        }
+function copyPublicLink() {
+    const linkInput = document.getElementById('publicLink');
+    linkInput.select();
+    document.execCommand('copy');
+    
+    // Показываем уведомление
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 end-0 m-3';
+    alert.style.zIndex = '9999';
+    alert.innerHTML = 'Ссылка скопирована! <button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+    document.body.appendChild(alert);
+    
+    setTimeout(() => {
+        alert.remove();
+    }, 3000);
+}
     </script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>    
