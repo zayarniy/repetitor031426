@@ -11,36 +11,176 @@ $error = '';
 $action = $_GET['action'] ?? 'list';
 $topicId = $_GET['id'] ?? 0;
 
+// Массовое удаление выбранных тем
+if (isset($_POST['bulk_delete']) && isset($_POST['selected_topics']) && is_array($_POST['selected_topics'])) {
+    $selectedTopics = $_POST['selected_topics'];
+    $selectedCount = count($selectedTopics);
+    
+    if ($selectedCount > 0) {
+        try {
+            $pdo->beginTransaction();
+            
+            $placeholders = implode(',', array_fill(0, $selectedCount, '?'));
+            
+            // Проверяем, используются ли темы в занятиях
+            $stmt = $pdo->prepare("
+                SELECT COUNT(*) FROM lesson_topics 
+                WHERE topic_id IN ($placeholders)
+            ");
+            $stmt->execute($selectedTopics);
+            $inUse = $stmt->fetchColumn();
+            
+            if ($inUse > 0) {
+                // Если темы используются, сохраняем их IDs в сессии для подтверждения
+                $_SESSION['bulk_delete_topics'] = $selectedTopics;
+                header('Location: topics.php?confirm_bulk_delete=1');
+                exit();
+            } else {
+                // Если не используются, удаляем
+                // Удаляем ссылки тем
+                $stmt = $pdo->prepare("DELETE FROM topic_links WHERE topic_id IN ($placeholders)");
+                $stmt->execute($selectedTopics);
+                
+                // Удаляем связи с метками
+                $stmt = $pdo->prepare("DELETE FROM topic_labels WHERE topic_id IN ($placeholders)");
+                $stmt->execute($selectedTopics);
+                
+                // Удаляем темы
+                $stmt = $pdo->prepare("DELETE FROM topics WHERE id IN ($placeholders) AND user_id = ?");
+                $params = array_merge($selectedTopics, [$userId]);
+                $stmt->execute($params);
+                
+                $pdo->commit();
+                header('Location: topics.php?message=bulk_deleted&count=' . $selectedCount);
+                exit();
+            }
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            $error = 'Ошибка при массовом удалении: ' . $e->getMessage();
+        }
+    }
+}
+
+// Подтверждение массового удаления
+if (isset($_GET['confirm_bulk_delete']) && isset($_SESSION['bulk_delete_topics'])) {
+    $selectedTopics = $_SESSION['bulk_delete_topics'];
+    $selectedCount = count($selectedTopics);
+    $placeholders = implode(',', array_fill(0, $selectedCount, '?'));
+    
+    // Получаем информацию о темах
+    $stmt = $pdo->prepare("
+        SELECT id, name FROM topics 
+        WHERE id IN ($placeholders) AND user_id = ?
+    ");
+    $params = array_merge($selectedTopics, [$userId]);
+    $stmt->execute($params);
+    $topicsToDelete = $stmt->fetchAll();
+    
+    // Получаем количество занятий с этими темами
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*) FROM lesson_topics 
+        WHERE topic_id IN ($placeholders)
+    ");
+    $stmt->execute($selectedTopics);
+    $lessonCount = $stmt->fetchColumn();
+    ?>
+    <!DOCTYPE html>
+    <html lang="ru">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Подтверждение массового удаления</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    </head>
+    <body>
+        <div class="container mt-5">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">Подтверждение массового удаления тем</h5>
+                </div>
+                <div class="card-body">
+                    <p class="lead">Вы выбрали для удаления следующие темы:</p>
+                    <ul>
+                        <?php foreach ($topicsToDelete as $topic): ?>
+                            <li><?php echo htmlspecialchars($topic['name']); ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                    <p class="text-danger">Эти темы используются в <?php echo $lessonCount; ?> занятиях.</p>
+                    <p class="text-danger">При удалении тем связи с занятиями будут также удалены!</p>
+                    <div class="d-flex justify-content-between">
+                        <a href="topics.php" class="btn btn-secondary">Отмена</a>
+                        <form method="POST" action="">
+                            <?php foreach ($selectedTopics as $topicId): ?>
+                                <input type="hidden" name="selected_topics[]" value="<?php echo $topicId; ?>">
+                            <?php endforeach; ?>
+                            <button type="submit" name="force_bulk_delete" class="btn btn-danger">Да, удалить выбранные темы и связи</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+    <?php
+    exit();
+}
+
+// Принудительное массовое удаление
+if (isset($_POST['force_bulk_delete']) && isset($_POST['selected_topics']) && is_array($_POST['selected_topics'])) {
+    $selectedTopics = $_POST['selected_topics'];
+    $selectedCount = count($selectedTopics);
+    
+    if ($selectedCount > 0) {
+        try {
+            $pdo->beginTransaction();
+            
+            $placeholders = implode(',', array_fill(0, $selectedCount, '?'));
+            
+            // Удаляем связи с занятиями
+            $stmt = $pdo->prepare("DELETE FROM lesson_topics WHERE topic_id IN ($placeholders)");
+            $stmt->execute($selectedTopics);
+            
+            // Удаляем ссылки тем
+            $stmt = $pdo->prepare("DELETE FROM topic_links WHERE topic_id IN ($placeholders)");
+            $stmt->execute($selectedTopics);
+            
+            // Удаляем связи с метками
+            $stmt = $pdo->prepare("DELETE FROM topic_labels WHERE topic_id IN ($placeholders)");
+            $stmt->execute($selectedTopics);
+            
+            // Удаляем темы
+            $stmt = $pdo->prepare("DELETE FROM topics WHERE id IN ($placeholders) AND user_id = ?");
+            $params = array_merge($selectedTopics, [$userId]);
+            $stmt->execute($params);
+            
+            $pdo->commit();
+            unset($_SESSION['bulk_delete_topics']);
+            header('Location: topics.php?message=bulk_force_deleted&count=' . $selectedCount);
+            exit();
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            $error = 'Ошибка при массовом удалении: ' . $e->getMessage();
+        }
+    }
+}
+
 // Получение категорий для фильтрации
 $stmt = $pdo->prepare("SELECT * FROM categories WHERE user_id = ? OR user_id IS NULL ORDER BY name");
 $stmt->execute([$userId]);
 $categories = $stmt->fetchAll();
 
-// Получение всех меток для тем с группировкой по категориям
+// Получение меток для фильтрации
 $stmt = $pdo->prepare("
-    SELECT l.*, c.name as category_name, c.color as category_color 
+    SELECT l.*, c.name as category_name 
     FROM labels l
     LEFT JOIN categories c ON l.category_id = c.id
     WHERE l.user_id = ? AND (l.label_type = 'topic' OR l.label_type = 'general')
     ORDER BY c.name, l.name
 ");
 $stmt->execute([$userId]);
-$allLabels = $stmt->fetchAll();
+$labels = $stmt->fetchAll();
 
-// Группировка меток по категориям для удобного отображения
-$groupedLabels = [];
-foreach ($allLabels as $label) {
-    $catName = $label['category_name'] ?? 'Без категории';
-    if (!isset($groupedLabels[$catName])) {
-        $groupedLabels[$catName] = [
-            'color' => $label['category_color'] ?? '#808080',
-            'labels' => []
-        ];
-    }
-    $groupedLabels[$catName]['labels'][] = $label;
-}
-
-// Удаление темы
+// Удаление темы (одиночное)
 if (isset($_GET['delete']) && $topicId) {
     try {
         // Проверяем, используется ли тема в занятиях
@@ -79,7 +219,7 @@ if (isset($_GET['delete']) && $topicId) {
     }
 }
 
-// Подтверждение удаления темы с занятиями
+// Подтверждение удаления темы с занятиями (одиночное)
 if (isset($_GET['confirm_delete']) && isset($_SESSION['delete_topic_' . $_GET['confirm_delete']])) {
     $deleteId = $_GET['confirm_delete'];
     unset($_SESSION['delete_topic_' . $deleteId]);
@@ -126,7 +266,7 @@ if (isset($_GET['confirm_delete']) && isset($_SESSION['delete_topic_' . $_GET['c
     }
 }
 
-// Принудительное удаление с удалением связей
+// Принудительное удаление с удалением связей (одиночное)
 if (isset($_GET['force_delete']) && $topicId) {
     try {
         $pdo->beginTransaction();
@@ -162,7 +302,7 @@ if (isset($_GET['clear_all'])) {
     $stmt = $pdo->prepare("
         SELECT COUNT(*) FROM topics t
         LEFT JOIN lesson_topics lt ON lt.topic_id = t.id
-        WHERE t.user_id = ? AND lt.id IS NOT NULL
+        WHERE t.user_id = ? AND lt.topic_id IS NOT NULL
     ");
     $stmt->execute([$userId]);
     $inUse = $stmt->fetchColumn();
@@ -716,6 +856,12 @@ if ($action === 'edit' && $topicId) {
         exit();
     }
 }
+
+// Получение категории "Без категории" для использования по умолчанию
+$stmt = $pdo->prepare("SELECT id FROM categories WHERE user_id = ? AND name = 'Без категории'");
+$stmt->execute([$userId]);
+$noCategory = $stmt->fetch();
+$noCategoryId = $noCategory ? $noCategory['id'] : null;
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -740,6 +886,19 @@ if ($action === 'edit' && $topicId) {
             transform: translateY(-3px);
             box-shadow: 0 5px 20px rgba(0,0,0,0.15);
         }
+        .topic-card.selected {
+            border: 2px solid #667eea;
+            background: #f0f4ff;
+        }
+        .topic-checkbox {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            z-index: 10;
+        }
         .topic-name {
             font-size: 1.2em;
             font-weight: 600;
@@ -747,6 +906,7 @@ if ($action === 'edit' && $topicId) {
             display: flex;
             align-items: center;
             justify-content: space-between;
+            padding-right: 30px;
         }
         .topic-category {
             display: inline-block;
@@ -789,7 +949,7 @@ if ($action === 'edit' && $topicId) {
         .label-badge {
             background: #e9ecef;
             border-radius: 15px;
-            padding: 3px 10px;
+            padding: 2px 10px;
             font-size: 0.8em;
             display: inline-block;
             margin-right: 5px;
@@ -856,26 +1016,18 @@ if ($action === 'edit' && $topicId) {
             font-size: 0.75em;
             margin-left: 10px;
         }
-        .labels-section {
-            max-height: 300px;
-            overflow-y: auto;
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            padding: 10px;
+        .bulk-actions {
+            background: white;
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 15px;
         }
-        .label-category {
-            font-weight: 600;
-            margin-top: 10px;
-            margin-bottom: 5px;
-            padding-left: 5px;
-            border-left: 3px solid;
-        }
-        .label-category:first-child {
-            margin-top: 0;
-        }
-        .label-checkbox {
-            margin-left: 15px;
-            margin-bottom: 5px;
+        .select-all {
+            cursor: pointer;
         }
     </style>
 </head>
@@ -891,9 +1043,16 @@ if ($action === 'edit' && $topicId) {
                     'deleted' => 'Тема удалена',
                     'force_deleted' => 'Тема и все связи удалены',
                     'cleared' => 'Все темы удалены',
-                    'imported' => 'Импорт выполнен успешно'
+                    'imported' => 'Импорт выполнен успешно',
+                    'bulk_deleted' => 'Выбранные темы удалены',
+                    'bulk_force_deleted' => 'Выбранные темы и связи удалены'
                 ];
-                echo $messages[$_GET['message']] ?? 'Операция выполнена успешно';
+                
+                $messageText = $messages[$_GET['message']] ?? 'Операция выполнена успешно';
+                if (isset($_GET['count'])) {
+                    $messageText = str_replace('Выбранные', $_GET['count'], $messageText);
+                }
+                echo $messageText;
                 ?>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
@@ -969,8 +1128,8 @@ if ($action === 'edit' && $topicId) {
                     </div>
                     <div class="col-md-3">
                         <div class="text-center">
-                            <h3 class="mb-0"><?php echo count($allLabels); ?></h3>
-                            <small>Доступных меток</small>
+                            <h3 class="mb-0"><?php echo count($categories); ?></h3>
+                            <small>Категорий</small>
                         </div>
                     </div>
                 </div>
@@ -998,7 +1157,7 @@ if ($action === 'edit' && $topicId) {
                         <label class="form-label">Метка</label>
                         <select name="filter_label" class="form-select">
                             <option value="">Все метки</option>
-                            <?php foreach ($allLabels as $label): ?>
+                            <?php foreach ($labels as $label): ?>
                                 <option value="<?php echo $label['id']; ?>" <?php echo $filterLabel == $label['id'] ? 'selected' : ''; ?>>
                                     <?php echo htmlspecialchars($label['name']); ?>
                                 </option>
@@ -1021,8 +1180,21 @@ if ($action === 'edit' && $topicId) {
                 </form>
             </div>
             
+            <!-- Массовые действия -->
+            <form method="POST" action="" id="bulkForm">
+                <div class="bulk-actions">
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="selectAll" onclick="toggleSelectAll()">
+                        <label class="form-check-label select-all" for="selectAll">Выбрать все</label>
+                    </div>
+                    <span id="selectedCount" class="badge bg-primary">0</span> тем выбрано
+                    <button type="submit" name="bulk_delete" class="btn btn-danger btn-sm" onclick="return confirmBulkDelete()">
+                        <i class="bi bi-trash"></i> Удалить выбранные
+                    </button>
+                </div>
+            
             <!-- Список тем -->
-            <div class="row">
+            <div class="row" id="topics-list">
                 <?php if (empty($topics)): ?>
                     <div class="col-12">
                         <div class="alert alert-info text-center py-5">
@@ -1035,6 +1207,9 @@ if ($action === 'edit' && $topicId) {
                     <?php foreach ($topics as $topic): ?>
                         <div class="col-md-6 col-lg-4">
                             <div class="topic-card" style="border-left-color: <?php echo $topic['category_color'] ?? '#808080'; ?>">
+                                <input type="checkbox" name="selected_topics[]" value="<?php echo $topic['id']; ?>" 
+                                       class="topic-checkbox" onchange="updateSelectedCount()">
+                                
                                 <div class="topic-name">
                                     <?php echo htmlspecialchars($topic['name']); ?>
                                     <?php if ($topic['usage_count'] > 0): ?>
@@ -1133,6 +1308,7 @@ if ($action === 'edit' && $topicId) {
                     <?php endforeach; ?>
                 <?php endif; ?>
             </div>
+            </form>
             
             <!-- Быстрые действия -->
             <div class="quick-actions">
@@ -1186,45 +1362,30 @@ if ($action === 'edit' && $topicId) {
                                     </select>
                                 </div>
                                 
-                                <!-- Выбор меток из банка меток -->
                                 <div class="mb-3">
-                                    <label class="form-label">Метки <small class="text-muted">(из банка меток)</small></label>
-                                    <div class="labels-section">
-                                        <?php if (empty($groupedLabels)): ?>
-                                            <p class="text-muted text-center py-3">
-                                                Нет доступных меток. 
-                                                <a href="labels.php?action=add" target="_blank">Создайте метки</a> в банке меток.
-                                            </p>
+                                    <label class="form-label">Метки</label>
+                                    <div class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
+                                        <?php if (empty($labels)): ?>
+                                            <p class="text-muted">Нет доступных меток. Создайте метки в банке меток.</p>
                                         <?php else: ?>
-                                            <?php foreach ($groupedLabels as $catName => $catData): ?>
-                                                <div class="label-category" style="border-left-color: <?php echo $catData['color']; ?>">
-                                                    <?php echo htmlspecialchars($catName); ?>
+                                            <?php foreach ($labels as $label): ?>
+                                                <div class="form-check">
+                                                    <input type="checkbox" name="labels[]" value="<?php echo $label['id']; ?>" 
+                                                           class="form-check-input" 
+                                                           id="label_<?php echo $label['id']; ?>"
+                                                           <?php echo ($editTopicLabels && in_array($label['id'], $editTopicLabels)) ? 'checked' : ''; ?>>
+                                                    <label class="form-check-label" for="label_<?php echo $label['id']; ?>">
+                                                        <?php echo htmlspecialchars($label['name']); ?>
+                                                        <?php if ($label['category_name']): ?>
+                                                            <small class="text-muted">(<?php echo htmlspecialchars($label['category_name']); ?>)</small>
+                                                        <?php endif; ?>
+                                                    </label>
                                                 </div>
-                                                <?php foreach ($catData['labels'] as $label): ?>
-                                                    <div class="form-check label-checkbox">
-                                                        <input type="checkbox" name="labels[]" value="<?php echo $label['id']; ?>" 
-                                                               class="form-check-input" 
-                                                               id="label_<?php echo $label['id']; ?>"
-                                                               <?php echo ($editTopicLabels && in_array($label['id'], $editTopicLabels)) ? 'checked' : ''; ?>>
-                                                        <label class="form-check-label" for="label_<?php echo $label['id']; ?>">
-                                                            <?php echo htmlspecialchars($label['name']); ?>
-                                                            <?php if ($label['label_type'] === 'topic'): ?>
-                                                                <span class="badge bg-info">тема</span>
-                                                            <?php endif; ?>
-                                                        </label>
-                                                    </div>
-                                                <?php endforeach; ?>
                                             <?php endforeach; ?>
                                         <?php endif; ?>
                                     </div>
-                                    <small class="text-muted">
-                                        <i class="bi bi-info-circle"></i> 
-                                        Отображаются только метки типа "Темы" и "Общие". 
-                                        <a href="labels.php" target="_blank">Управлять метками</a>
-                                    </small>
                                 </div>
                                 
-                                <!-- Ссылки на ресурсы -->
                                 <div class="mb-3">
                                     <label class="form-label">Ссылки на ресурсы</label>
                                     <div id="links-container">
@@ -1301,7 +1462,6 @@ if ($action === 'edit' && $topicId) {
                                 <li>Можно добавить несколько ссылок на ресурсы</li>
                                 <li>Метки помогут в поиске и фильтрации</li>
                                 <li>Категория необязательна</li>
-                                <li>Для удобства метки сгруппированы по категориям</li>
                             </ul>
                             
                             <!-- Быстрый переход в банк меток -->
@@ -1468,27 +1628,71 @@ if ($action === 'edit' && $topicId) {
             const checkboxes = document.querySelectorAll('input[name="labels[]"]');
             const preview = document.getElementById('selected-labels-preview');
             
-            function updatePreview() {
-                const selected = [];
-                checkboxes.forEach(cb => {
-                    if (cb.checked) {
-                        const label = document.querySelector(`label[for="${cb.id}"]`).innerText.trim();
-                        selected.push(`<span class="badge bg-primary">${label}</span>`);
+            if (preview) {
+                function updatePreview() {
+                    const selected = [];
+                    checkboxes.forEach(cb => {
+                        if (cb.checked) {
+                            const label = document.querySelector(`label[for="${cb.id}"]`).innerText.trim();
+                            const cleanLabel = label.split('(')[0].trim();
+                            selected.push(`<span class="badge bg-primary">${cleanLabel}</span>`);
+                        }
+                    });
+                    
+                    if (selected.length > 0) {
+                        preview.innerHTML = selected.join(' ');
+                    } else {
+                        preview.innerHTML = '<span class="text-muted">Нет выбранных меток</span>';
                     }
+                }
+                
+                checkboxes.forEach(cb => {
+                    cb.addEventListener('change', updatePreview);
                 });
                 
-                if (selected.length > 0) {
-                    preview.innerHTML = selected.join(' ');
-                } else {
-                    preview.innerHTML = '<span class="text-muted">Нет выбранных меток</span>';
-                }
+                updatePreview();
             }
+        });
+        
+        // Функции для массового выбора
+        function toggleSelectAll() {
+            const selectAll = document.getElementById('selectAll');
+            const checkboxes = document.querySelectorAll('input[name="selected_topics[]"]');
             
             checkboxes.forEach(cb => {
-                cb.addEventListener('change', updatePreview);
+                cb.checked = selectAll.checked;
             });
             
-            updatePreview();
+            updateSelectedCount();
+        }
+        
+        function updateSelectedCount() {
+            const checkboxes = document.querySelectorAll('input[name="selected_topics[]"]:checked');
+            const count = checkboxes.length;
+            document.getElementById('selectedCount').textContent = count;
+            
+            // Подсветка выбранных карточек
+            document.querySelectorAll('.topic-card').forEach((card, index) => {
+                if (checkboxes[index] && checkboxes[index].checked) {
+                    card.classList.add('selected');
+                } else {
+                    card.classList.remove('selected');
+                }
+            });
+        }
+        
+        function confirmBulkDelete() {
+            const checkboxes = document.querySelectorAll('input[name="selected_topics[]"]:checked');
+            if (checkboxes.length === 0) {
+                alert('Выберите хотя бы одну тему для удаления');
+                return false;
+            }
+            return confirm(`Удалить ${checkboxes.length} выбранных тем?`);
+        }
+        
+        // Инициализация подсветки при загрузке
+        document.addEventListener('DOMContentLoaded', function() {
+            updateSelectedCount();
         });
     </script>
 </body>
