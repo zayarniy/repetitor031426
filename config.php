@@ -2,15 +2,23 @@
 session_start();
 
 // Параметры подключения к БД
+/*
+define('DB_HOST', '127.0.0.1');
+define('DB_USER', 'root');
+define('DB_PASS', '');
+define('DB_NAME', 'repetitor031426');
+*/
+
 define('DB_HOST', '127.0.0.1');
 define('PORT', '3308');
 define('DB_USER', 'host1340522_user26');
 define('DB_PASS', 'a32d3bd4');
 define('DB_NAME', 'host1340522_repetitor031426');
 
+
 // Подключение к базе данных
 try {
-    $pdo = new PDO("mysql:host=" . DB_HOST .";port=".PORT. ";dbname=" . DB_NAME . ";charset=utf8mb4", DB_USER, DB_PASS);
+    $pdo = new PDO("mysql:host=" . DB_HOST . ";port=" .PORT . ";dbname=" . DB_NAME . ";charset=utf8mb4", DB_USER, DB_PASS);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 } catch(PDOException $e) {

@@ -538,6 +538,28 @@ $stmt = $pdo->prepare($query);
 $stmt->execute($params);
 $plannings = $stmt->fetchAll();
 
+// Получение всех тем с категориями и цветами
+$stmt = $pdo->prepare("
+    SELECT t.*, c.name as category_name, c.color as category_color 
+    FROM topics t
+    LEFT JOIN categories c ON t.category_id = c.id
+    WHERE t.user_id = ?
+    ORDER BY c.name, t.name
+");
+$stmt->execute([$userId]);
+$allTopics = $stmt->fetchAll();
+
+// Создаем ассоциативный массив цветов тем для быстрого доступа
+$topicColors = [];
+foreach ($allTopics as $topic) {
+    $topicColors[$topic['id']] = $topic['category_color'] ?? '#808080';
+}
+
+// Создаем массив названий тем для быстрого доступа
+$topicNames = [];
+foreach ($allTopics as $topic) {
+    $topicNames[$topic['id']] = $topic['name'];
+}
 
 // Определение текущей вкладки
 $currentTab = $_GET['tab'] ?? 'info';
@@ -731,6 +753,96 @@ $currentTab = $_GET['tab'] ?? 'info';
             padding: 10px;
             margin-top: 10px;
         }
+
+        .topic-badge {
+            background: #e9ecef;
+            border-radius: 15px;
+            padding: 4px 12px;
+            font-size: 0.85em;
+            display: inline-block;
+            margin-right: 5px;
+            margin-bottom: 5px;
+            border-left: 4px solid;
+            transition: all 0.2s;
+        }
+
+        .topic-badge:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .color-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+            margin-right: 5px;
+            vertical-align: middle;
+        }
+
+        #topicsList .topic-item {
+            padding: 8px;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background 0.2s;
+        }
+
+        #topicsList .topic-item:hover {
+            background: #f8f9fa;
+        }
+
+        #topicsList .topic-item:last-child {
+            border-bottom: none;
+        }
+
+        /* Стили для кастомного тултипа */
+        .topic-badge {
+            position: relative;
+            cursor: help;
+        }
+
+        .topic-badge .tooltip-text {
+            visibility: hidden;
+            position: absolute;
+            bottom: 120%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            text-align: center;
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            pointer-events: none;
+        }
+
+        .topic-badge .tooltip-text::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #333 transparent transparent transparent;
+        }
+
+        .topic-badge:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* Для мобильных устройств */
+        @media (max-width: 768px) {
+            .topic-badge .tooltip-text {
+                white-space: normal;
+                width: 150px;
+            }
+        }
     </style>
 </head>
 
@@ -921,7 +1033,7 @@ $currentTab = $_GET['tab'] ?? 'info';
                                                 <span class="label-badge">
                                                     <?php echo htmlspecialchars(trim($label)); ?>
                                                 </span>
-                                            <?php
+                                                <?php
                                             endif;
                                         endforeach;
                                         ?>
@@ -1156,22 +1268,30 @@ $currentTab = $_GET['tab'] ?? 'info';
                                                                     <?php foreach ($selectedTopicIds as $topicId): ?>
                                                                         <?php if (!empty($topicId)): ?>
                                                                             <?php
-                                                                            $topic = array_filter($allTopics, function ($t) use ($topicId) {
-                                                                                return $t['id'] == $topicId;
-                                                                            });
-                                                                            $topic = reset($topic);
-                                                                            if ($topic):
-                                                                                ?>
-                                                                                <span class="topic-badge"
-                                                                                    style="border-left-color: <?php echo $topic['category_color'] ?? '#808080'; ?>">
-                                                                                    <?php echo htmlspecialchars($topic['name']); ?>
-                                                                                    <input type="hidden"
-                                                                                        name="rows[<?php echo $index; ?>][topics][]"
-                                                                                        value="<?php echo $topicId; ?>">
-                                                                                    <i class="bi bi-x-circle-fill ms-1" style="cursor: pointer;"
-                                                                                        onclick="removeTopic(this, <?php echo $index; ?>, <?php echo $topicId; ?>)"></i>
-                                                                                </span>
-                                                                            <?php endif; ?>
+                                                                            $topicName = $topicNames[$topicId] ?? 'Тема';
+                                                                            $topicColor = $topicColors[$topicId] ?? '#808080';
+
+                                                                            // Получаем название категории для этой темы
+                                                                            $categoryName = 'Без категории';
+                                                                            foreach ($allTopics as $topic) {
+                                                                                if ($topic['id'] == $topicId) {
+                                                                                    $categoryName = $topic['category_name'] ?? 'Без категории';
+                                                                                    break;
+                                                                                }
+                                                                            }
+                                                                            ?>
+                                                                            <span class="topic-badge"
+                                                                                style="border-left-color: <?php echo $topicColor; ?>; background-color: <?php echo $topicColor; ?>20;"
+                                                                                data-bs-toggle="tooltip" data-bs-placement="top"
+                                                                                title="<?php echo htmlspecialchars($categoryName); ?>">
+                                                                                <?php echo htmlspecialchars($topicName); ?>
+                                                                                <input type="hidden"
+                                                                                    name="rows[<?php echo $index; ?>][topics][]"
+                                                                                    value="<?php echo $topicId; ?>">
+                                                                                <i class="bi bi-x-circle-fill ms-1"
+                                                                                    style="cursor: pointer; color: #666;"
+                                                                                    onclick="removeTopic(this, <?php echo $index; ?>, <?php echo $topicId; ?>)"></i>
+                                                                            </span>
                                                                         <?php endif; ?>
                                                                     <?php endforeach; ?>
                                                                 </div>
@@ -1436,13 +1556,52 @@ $currentTab = $_GET['tab'] ?? 'info';
                                                     <td><?php echo $row['lesson_date'] ? date('d.m.Y', strtotime($row['lesson_date'])) : ''; ?>
                                                     </td>
                                                     <td>
-                                                        <?php if (!empty($topicNames)): ?>
-                                                            <?php foreach ($topicNames as $topicName): ?>
-                                                                <span class="topic-badge"><?php echo htmlspecialchars($topicName); ?></span>
-                                                            <?php endforeach; ?>
-                                                        <?php endif; ?>
+                                                        <?php
+                                                        // Получаем ID тем для этого ряда из базы данных
+                                                        if (!empty($row['selected_topic_ids'])) {
+                                                            $topicIds = explode(',', $row['selected_topic_ids']);
+
+                                                            foreach ($topicIds as $topicId) {
+                                                                if (!empty($topicId)) {
+                                                                    // Находим информацию о теме в массиве allTopics
+                                                                    $topicInfo = null;
+                                                                    foreach ($allTopics as $topic) {
+                                                                        if ($topic['id'] == $topicId) {
+                                                                            $topicInfo = $topic;
+                                                                            break;
+                                                                        }
+                                                                    }
+
+                                                                    if ($topicInfo) {
+                                                                        $topicName = $topicInfo['name'];
+                                                                        $topicColor = $topicInfo['category_color'] ?? '#808080';
+                                                                        $categoryName = $topicInfo['category_name'] ?? 'Без категории';
+                                                                    } else {
+                                                                        // Если тема не найдена в allTopics (например, была удалена)
+                                                                        $topicName = 'Тема (удалена)';
+                                                                        $topicColor = '#808080';
+                                                                        $categoryName = 'Неизвестно';
+                                                                    }
+                                                                    ?>
+                                                                    <span class="topic-badge"
+                                                                        style="border-left-color: <?php echo $topicColor; ?>; background-color: <?php echo $topicColor; ?>20;"
+                                                                        data-category="<?php echo htmlspecialchars($categoryName); ?>">
+                                                                        <?php echo htmlspecialchars($topicName); ?>
+                                                                        <span class="tooltip-text">
+                                                                            <?php echo htmlspecialchars($categoryName); ?>
+                                                                        </span>
+                                                                    </span>
+                                                                    <?php
+                                                                }
+                                                            }
+                                                        }
+                                                        ?>
+
                                                         <?php if (!empty($row['topics_text'])): ?>
-                                                            <div><?php echo nl2br(htmlspecialchars($row['topics_text'])); ?></div>
+                                                            <div class="mt-1 text-muted small">
+                                                                <i class="bi bi-pencil-square"></i>
+                                                                <?php echo nl2br(htmlspecialchars($row['topics_text'])); ?>
+                                                            </div>
                                                         <?php endif; ?>
                                                     </td>
                                                     <td>
@@ -1557,6 +1716,7 @@ $currentTab = $_GET['tab'] ?? 'info';
     </div>
 
     <!-- Модальное окно выбора тем -->
+    <!-- Модальное окно выбора тем -->
     <div class="modal fade" id="topicsModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -1573,7 +1733,8 @@ $currentTab = $_GET['tab'] ?? 'info';
                             <select class="form-select" id="topicCategoryFilter">
                                 <option value="">Все категории</option>
                                 <?php foreach ($categories as $category): ?>
-                                    <option value="<?php echo $category['id']; ?>">
+                                    <option value="<?php echo $category['id']; ?>"
+                                        data-color="<?php echo $category['color']; ?>">
                                         <?php echo htmlspecialchars($category['name']); ?>
                                     </option>
                                 <?php endforeach; ?>
@@ -1585,14 +1746,18 @@ $currentTab = $_GET['tab'] ?? 'info';
                         <?php foreach ($allTopics as $topic): ?>
                             <div class="form-check topic-item" data-id="<?php echo $topic['id']; ?>"
                                 data-name="<?php echo strtolower($topic['name']); ?>"
-                                data-category="<?php echo $topic['category_id']; ?>">
+                                data-category="<?php echo $topic['category_id']; ?>"
+                                data-color="<?php echo $topic['category_color'] ?? '#808080'; ?>">
                                 <input type="checkbox" class="form-check-input topic-checkbox"
                                     value="<?php echo $topic['id']; ?>" id="modal_topic_<?php echo $topic['id']; ?>">
                                 <label class="form-check-label" for="modal_topic_<?php echo $topic['id']; ?>">
+                                    <span class="color-indicator"
+                                        style="display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: <?php echo $topic['category_color'] ?? '#808080'; ?>; margin-right: 5px;"></span>
                                     <?php echo htmlspecialchars($topic['name']); ?>
                                     <?php if ($topic['category_name']): ?>
-                                        <small
-                                            class="text-muted">(<?php echo htmlspecialchars($topic['category_name']); ?>)</small>
+                                        <small class="text-muted">(
+                                            <?php echo htmlspecialchars($topic['category_name']); ?>)
+                                        </small>
                                     <?php endif; ?>
                                 </label>
                             </div>
@@ -1757,16 +1922,25 @@ $currentTab = $_GET['tab'] ?? 'info';
                 const topicId = cb.value;
                 const topicDiv = cb.closest('.topic-item');
                 const topicName = topicDiv.querySelector('label').innerText.split('(')[0].trim();
-                const categoryColor = '<?php echo isset($topic["category_color"]) ? $topic["category_color"] : "#808080"; ?>';
+
+                // Получаем название категории и цвет
+                const categoryName = topicDiv.dataset.categoryName || 'Без категории';
+                const categoryColor = topicDiv.dataset.color || '#808080';
 
                 const span = document.createElement('span');
                 span.className = 'topic-badge';
                 span.style.borderLeftColor = categoryColor;
+                span.style.backgroundColor = categoryColor + '20';
+                span.setAttribute('data-category', categoryName);
+                span.setAttribute('data-topic-id', topicId);
+
+                // Создаем контент с тултипом
                 span.innerHTML = `
-                    ${topicName}
-                    <input type="hidden" name="rows[${currentRowIndex}][topics][]" value="${topicId}">
-                    <i class="bi bi-x-circle-fill ms-1" style="cursor: pointer;" onclick="removeTopic(this, ${currentRowIndex}, ${topicId})"></i>
-                `;
+            ${topicName}
+            <span class="tooltip-text">${categoryName}</span>
+            <input type="hidden" name="rows[${currentRowIndex}][topics][]" value="${topicId}">
+            <i class="bi bi-x-circle-fill ms-1" style="cursor: pointer; color: #666;" onclick="removeTopic(this, ${currentRowIndex}, ${topicId})"></i>
+        `;
                 container.appendChild(span);
             });
 
@@ -1774,9 +1948,11 @@ $currentTab = $_GET['tab'] ?? 'info';
         }
 
         function removeTopic(element, rowIdx, topicId) {
-            element.closest('.topic-badge').remove();
+            const badge = element.closest('.topic-badge');
+            if (badge) {
+                badge.remove();
+            }
         }
-
         // Функции для работы с ресурсами
         function openResourcesModal(rowIdx) {
             currentRowIndex = rowIdx;
@@ -1924,6 +2100,14 @@ $currentTab = $_GET['tab'] ?? 'info';
             link.download = 'planning_export.csv';
             link.click();
         }
+
+        // Инициализация Bootstrap тултипов
+        document.addEventListener('DOMContentLoaded', function () {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        });
     </script>
 </body>
 
