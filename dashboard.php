@@ -5,6 +5,30 @@ requireAuth();
 $currentUser = getCurrentUser($pdo);
 $userId = $currentUser['id'];
 
+// Обработка навигации по неделям
+$weekOffset = isset($_GET['week_offset']) ? intval($_GET['week_offset']) : 0;
+$selectedDate = isset($_GET['week_date']) ? $_GET['week_date'] : '';
+
+// Вычисляем даты начала и конца недели с учетом смещения
+if (!empty($selectedDate)) {
+    // Используем выбранную дату
+    $weekStart = date('Y-m-d', strtotime('monday this week', strtotime($selectedDate)));
+    $weekEnd = date('Y-m-d', strtotime('sunday this week', strtotime($selectedDate)));
+    $weekOffset = 0; // Сбрасываем смещение при выборе конкретной даты
+} elseif ($weekOffset != 0) {
+    // Используем смещение в неделях
+    $weekStart = date('Y-m-d', strtotime('monday this week ' . ($weekOffset > 0 ? '+' . $weekOffset : $weekOffset) . ' weeks'));
+    $weekEnd = date('Y-m-d', strtotime('sunday this week ' . ($weekOffset > 0 ? '+' . $weekOffset : $weekOffset) . ' weeks'));
+} else {
+    // Текущая неделя
+    $weekStart = date('Y-m-d', strtotime('monday this week'));
+    $weekEnd = date('Y-m-d', strtotime('sunday this week'));
+}
+
+// Форматируем даты для отображения
+$weekStartDisplay = date('d.m.Y', strtotime($weekStart));
+$weekEndDisplay = date('d.m.Y', strtotime($weekEnd));
+
 // Получение фильтров
 $selectedCategory = $_GET['category'] ?? '';
 $labelFilterMode = $_GET['label_mode'] ?? 'or';
@@ -42,16 +66,13 @@ $stmt = $pdo->prepare("SELECT DISTINCT class FROM students WHERE user_id = ? AND
 $stmt->execute([$userId]);
 $classes = $stmt->fetchAll();
 
-// Получение статистики
-// Активные ученики
+// Получение статистики для выбранной недели
+// Активные ученики (всего, не зависит от недели)
 $stmt = $pdo->prepare("SELECT COUNT(*) FROM students WHERE user_id = ? AND is_active = 1");
 $stmt->execute([$userId]);
 $activeStudents = $stmt->fetchColumn();
 
-// Занятия на неделю
-$weekStart = date('Y-m-d', strtotime('monday this week'));
-$weekEnd = date('Y-m-d', strtotime('sunday this week'));
-
+// Занятия на выбранную неделю
 $stmt = $pdo->prepare("
     SELECT COUNT(*) FROM lessons l
     JOIN students s ON l.student_id = s.id
@@ -69,7 +90,7 @@ $stmt = $pdo->prepare("
 $stmt->execute([$userId, $weekStart, $weekEnd]);
 $weeklyHours = round($stmt->fetchColumn(), 1);
 
-// Уроки сегодня
+// Уроки сегодня (не зависит от выбранной недели)
 $today = date('Y-m-d');
 $stmt = $pdo->prepare("
     SELECT COUNT(*) FROM lessons l
@@ -79,7 +100,7 @@ $stmt = $pdo->prepare("
 $stmt->execute([$userId, $today]);
 $todayLessons = $stmt->fetchColumn();
 
-// Доход за неделю (возможный и полученный)
+// Доход за выбранную неделю (возможный и полученный)
 $stmt = $pdo->prepare("
     SELECT 
         COALESCE(SUM(cost), 0) as potential,
@@ -91,12 +112,13 @@ $stmt = $pdo->prepare("
 $stmt->execute([$userId, $weekStart, $weekEnd]);
 $income = $stmt->fetch();
 
-// Получение расписания на неделю с фильтрами
+// Получение расписания на выбранную неделю с фильтрами
 $query = "
     SELECT 
         l.*,
-        s.first_name as student_first_name,
-        s.last_name as student_last_name,
+        l.diary_id,
+        s.first_name as first_name,
+        s.last_name as last_name,
         s.class,
         d.name as diary_name,
         GROUP_CONCAT(DISTINCT t.name) as topics,
@@ -149,6 +171,7 @@ if (!empty($selectedLabels)) {
 
 $query .= " GROUP BY l.id ORDER BY l.lesson_date, l.start_time";
 
+// Подготавливаем и выполняем запрос
 $stmt = $pdo->prepare($query);
 $params = [
     ':user_id' => $userId,
@@ -162,7 +185,7 @@ if ($selectedClass) {
 
 $stmt->execute($params);
 
-// Если есть фильтр по меткам, добавляем их параметры
+// Если есть фильтр по меткам, выполняем запрос с дополнительными параметрами
 if (!empty($selectedLabels)) {
     $stmt = $pdo->prepare($query);
     $params = [
@@ -206,8 +229,8 @@ foreach ($schedule as $lesson) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Дашборд - Дневник репетитора</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
     <style>
+        /* Ваши существующие стили */
         .stat-card {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -293,7 +316,7 @@ foreach ($schedule as $lesson) {
         }
         .filter-panel {
             background: white;
-            border-radius: 10px;
+            border-radius: 15px;
             padding: 20px;
             margin-bottom: 20px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
@@ -323,15 +346,96 @@ foreach ($schedule as $lesson) {
             background: #667eea;
             color: white;
         }
+        
+        /* Стили для навигации по неделям */
+        .week-navigation {
+            background: white;
+            border-radius: 15px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .btn-group .btn-outline-primary {
+            border-color: #dee2e6;
+            color: #495057;
+        }
+        
+        .btn-group .btn-outline-primary:hover {
+            background: #f8f9fa;
+            color: #667eea;
+            border-color: #667eea;
+        }
+        
+        .btn-group .btn-outline-primary.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .current-week-badge {
+            background: #28a745;
+            color: white;
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin-left: 8px;
+        }
+        
+        @media (max-width: 768px) {
+            .week-navigation .d-flex {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .btn-group {
+                width: 100%;
+            }
+            
+            .btn-group .btn {
+                flex: 1;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+        }
     </style>
 </head>
 <body>
     <?php include 'menu.php'; ?>
     
     <div class="container-fluid py-4">
-        <div class="row">
-            <div class="col-12">
-                <h2 class="mb-4">Дашборд</h2>
+        <!-- Заголовок и навигация по неделям -->
+        <div class="week-navigation">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <h4 class="mb-0"><i class="bi bi-calendar-week"></i> Период:</h4>
+                
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <!-- Навигация по неделям -->
+                    <div class="btn-group" role="group">
+                        <a href="?week_offset=<?php echo $weekOffset - 1; ?><?php echo !empty($_GET) ? '&' . http_build_query(array_diff_key($_GET, ['week_offset' => ''])) : ''; ?>" 
+                           class="btn btn-outline-primary" title="Предыдущая неделя">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                        <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#weekPickerModal">
+                            <i class="bi bi-calendar-range"></i> 
+                            <?php echo $weekStartDisplay; ?> - <?php echo $weekEndDisplay; ?>
+                            <?php if ($weekOffset == 0 && empty($selectedDate)): ?>
+                                <span class="current-week-badge">Текущая</span>
+                            <?php endif; ?>
+                        </button>
+                        <a href="?week_offset=<?php echo $weekOffset + 1; ?><?php echo !empty($_GET) ? '&' . http_build_query(array_diff_key($_GET, ['week_offset' => ''])) : ''; ?>" 
+                           class="btn btn-outline-primary" title="Следующая неделя">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </div>
+                    
+                    <!-- Кнопка для возврата на текущую неделю -->
+                    <a href="?week_offset=0<?php echo !empty($_GET) ? '&' . http_build_query(array_diff_key($_GET, ['week_offset' => '', 'week_date' => ''])) : ''; ?>" 
+                       class="btn btn-outline-secondary" title="Текущая неделя">
+                        <i class="bi bi-calendar-check"></i> Сегодня
+                    </a>
+                </div>
             </div>
         </div>
         
@@ -382,6 +486,13 @@ foreach ($schedule as $lesson) {
         <!-- Фильтры -->
         <div class="filter-panel">
             <form method="GET" action="" id="filterForm">
+                <?php if ($weekOffset != 0): ?>
+                    <input type="hidden" name="week_offset" value="<?php echo $weekOffset; ?>">
+                <?php endif; ?>
+                <?php if (!empty($selectedDate)): ?>
+                    <input type="hidden" name="week_date" value="<?php echo $selectedDate; ?>">
+                <?php endif; ?>
+                
                 <div class="row">
                     <div class="col-md-3 mb-3">
                         <label class="form-label">Категория меток</label>
@@ -456,16 +567,22 @@ foreach ($schedule as $lesson) {
                 <div class="row mt-3">
                     <div class="col-12">
                         <button type="submit" class="btn btn-filter">Применить фильтры</button>
-                        <a href="dashboard.php" class="btn btn-outline-secondary ms-2">Сбросить</a>
+                        <a href="dashboard.php<?php echo $weekOffset != 0 ? '?week_offset=' . $weekOffset : ''; ?>" class="btn btn-outline-secondary ms-2">Сбросить</a>
                     </div>
                 </div>
             </form>
         </div>
         
-        <!-- Расписание на неделю -->
+        <!-- Расписание на выбранную неделю -->
         <div class="row">
             <div class="col-12">
-                <h3 class="mb-3">Расписание на неделю (<?php echo date('d.m', strtotime($weekStart)); ?> - <?php echo date('d.m', strtotime($weekEnd)); ?>)</h3>
+                <h3 class="mb-3">
+                    <i class="bi bi-calendar-range"></i> 
+                    Расписание на неделю: <?php echo $weekStartDisplay; ?> - <?php echo $weekEndDisplay; ?>
+                    <?php if ($weekOffset != 0): ?>
+                        <small class="text-muted">(<?php echo $weekOffset > 0 ? '+' . $weekOffset : $weekOffset; ?> неделя)</small>
+                    <?php endif; ?>
+                </h3>
             </div>
         </div>
         
@@ -482,7 +599,7 @@ foreach ($schedule as $lesson) {
             ];
             
             foreach ($days as $dayKey => $dayName):
-                $date = date('d.m', strtotime("{$dayKey} this week"));
+                $date = date('d.m', strtotime("{$dayKey} this week", strtotime($weekStart)));
             ?>
             <div class="col-md-6 col-lg-4">
                 <div class="schedule-day">
@@ -496,7 +613,7 @@ foreach ($schedule as $lesson) {
                             elseif ($lesson['is_cancelled']) $lessonClass = 'cancelled';
                         ?>
                             <div class="lesson-item <?php echo $lessonClass; ?>" 
-                                onclick="window.location.href='lessons.php?action=edit&id=<?php echo $lesson['id']; ?>&diary_id=<?php echo $lesson['diary_id']; ?>&from=dashboard'">
+                                 onclick="window.location.href='lessons.php?action=edit&id=<?php echo $lesson['id']; ?>&diary_id=<?php echo $lesson['diary_id']; ?>'">
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div>
                                         <div class="lesson-time">
@@ -504,7 +621,7 @@ foreach ($schedule as $lesson) {
                                             (<?php echo floor($lesson['duration'] / 60) . 'ч ' . ($lesson['duration'] % 60) . 'м'; ?>)
                                         </div>
                                         <div class="lesson-student">
-                                            <?php echo htmlspecialchars($lesson['student_last_name'] . ' ' . $lesson['student_first_name']); ?>
+                                            <?php echo htmlspecialchars($lesson['last_name'] . ' ' . $lesson['first_name']); ?>
                                         </div>
                                         <div class="lesson-diary">
                                             <?php echo htmlspecialchars($lesson['diary_name']); ?>
@@ -546,6 +663,50 @@ foreach ($schedule as $lesson) {
         </div>
     </div>
     
+    <!-- Модальное окно выбора недели -->
+    <div class="modal fade" id="weekPickerModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Выбор недели</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="GET" action="">
+                    <div class="modal-body">
+                        <?php 
+                        // Сохраняем все текущие параметры фильтров
+                        foreach ($_GET as $key => $value) {
+                            if ($key != 'week_date' && $key != 'week_offset') {
+                                if (is_array($value)) {
+                                    foreach ($value as $v) {
+                                        echo '<input type="hidden" name="' . htmlspecialchars($key) . '[]" value="' . htmlspecialchars($v) . '">';
+                                    }
+                                } else {
+                                    echo '<input type="hidden" name="' . htmlspecialchars($key) . '" value="' . htmlspecialchars($value) . '">';
+                                }
+                            }
+                        }
+                        ?>
+                        <div class="mb-3">
+                            <label class="form-label">Выберите дату в нужной неделе</label>
+                            <input type="date" name="week_date" class="form-control" 
+                                   value="<?php echo $selectedDate ?: date('Y-m-d'); ?>" required>
+                            <small class="text-muted">
+                                Будет показана неделя, содержащая выбранную дату (пн-вс)
+                            </small>
+                        </div>
+                        <input type="hidden" name="week_offset" value="0">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button type="submit" class="btn btn-primary">Показать неделю</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         function toggleLabel(labelId) {
             const checkbox = document.getElementById('label_' + labelId);
@@ -553,7 +714,5 @@ foreach ($schedule as $lesson) {
             document.getElementById('filterForm').submit();
         }
     </script>
-    
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
