@@ -1032,6 +1032,66 @@ $currentTab = $_GET['tab'] ?? 'info';
         .row-action-btn.delete:hover {
             color: #dc3545;
         }
+
+        /* Стили для вертикального расположения кнопок */
+        .row-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            width: 100%;
+        }
+
+        .row-action-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6px 12px;
+            border-radius: 6px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.85rem;
+            width: 100%;
+        }
+
+        .row-action-btn i {
+            margin-right: 5px;
+            font-size: 1rem;
+        }
+
+        .row-action-btn:hover {
+            background: #e9ecef;
+            transform: translateY(-1px);
+        }
+
+        .row-action-btn.delete:hover {
+            background: #dc3545;
+            color: white;
+            border-color: #dc3545;
+        }
+
+        .btn-group-vertical .btn {
+            border-radius: 0;
+        }
+
+        .btn-group-vertical .btn:first-child {
+            border-top-left-radius: 6px;
+            border-top-right-radius: 6px;
+        }
+
+        .btn-group-vertical .btn:last-child {
+            border-bottom-left-radius: 6px;
+            border-bottom-right-radius: 6px;
+        }
+
+        /* Для мобильных устройств */
+        @media (max-width: 768px) {
+            .row-action-btn {
+                padding: 8px 12px;
+                font-size: 0.9rem;
+            }
+        }
     </style>
 </head>
 
@@ -1533,25 +1593,32 @@ $currentTab = $_GET['tab'] ?? 'info';
                                                                     class="form-control form-control-sm"
                                                                     value="<?php echo htmlspecialchars($row['notes']); ?>">
                                                             </td>
-                                                            <td>
-                                                                <button type="button" class="btn btn-sm btn-success"
-                                                                    onclick="openMoveToDiaryModal(<?php echo $row['id']; ?>, <?php echo $planningId; ?>)"
-                                                                    title="Перенести в дневник">
-                                                                    <i class="bi bi-calendar-plus"></i>
-                                                                </button>
-                                                                <div class="row-actions">
-                                                                    <span class="row-action-btn" title="Вставить сверху"
-                                                                        onclick="insertRowBefore(this)">
-                                                                        <i class="bi bi-arrow-up-short"></i>
-                                                                    </span>
-                                                                    <span class="row-action-btn" title="Вставить снизу"
-                                                                        onclick="insertRowAfter(this)">
-                                                                        <i class="bi bi-arrow-down-short"></i>
-                                                                    </span>
-                                                                    <span class="row-action-btn delete" title="Удалить"
-                                                                        onclick="removeRow(this)">
-                                                                        <i class="bi bi-x-circle"></i>
-                                                                    </span>
+                                                            <td class="text-center" style="vertical-align: middle; width: 120px;">
+                                                                <div class="d-flex flex-column gap-1">
+                                                                    <button type="button" class="btn btn-sm btn-success"
+                                                                        style="width: 100%;"
+                                                                        onclick="openMoveToDiaryModal(<?php echo $row['id']; ?>, <?php echo $planningId; ?>)"
+                                                                        title="Перенести в дневник">
+                                                                        <i class="bi bi-calendar-plus"></i> В дневник
+                                                                    </button>
+
+                                                                    <div class="btn-group-vertical w-100" role="group">
+                                                                        <button type="button"
+                                                                            class="btn btn-sm btn-outline-secondary row-action-btn"
+                                                                            title="Вставить сверху" onclick="insertRowBefore(this)">
+                                                                            <i class="bi bi-arrow-up-short"></i> Сверху
+                                                                        </button>
+                                                                        <button type="button"
+                                                                            class="btn btn-sm btn-outline-secondary row-action-btn"
+                                                                            title="Вставить снизу" onclick="insertRowAfter(this)">
+                                                                            <i class="bi bi-arrow-down-short"></i> Снизу
+                                                                        </button>
+                                                                        <button type="button"
+                                                                            class="btn btn-sm btn-outline-danger row-action-btn delete"
+                                                                            title="Удалить" onclick="removeRow(this)">
+                                                                            <i class="bi bi-x-circle"></i> Удалить
+                                                                        </button>
+                                                                    </div>
                                                                 </div>
                                                             </td>
                                                         </tr>
