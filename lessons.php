@@ -1386,9 +1386,9 @@ if (isset($_GET['delete']) && $lessonId) {
                     $completedLessons++;
                 if ($l['is_cancelled'])
                     $cancelledLessons++;
-                if ($l['cost']) {
+                if ($l['is_completed'] && $l['cost']) {
                     $totalCost += $l['cost'];
-                    if ($l['is_paid'])
+                    if ($l['is_completed'] && $l['is_paid'])
                         $paidCost += $l['cost'];
                 }
             }

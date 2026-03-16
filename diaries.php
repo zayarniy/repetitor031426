@@ -1121,15 +1121,19 @@ if ($publicView) {
         </div>
     <?php else: ?>
         <?php foreach ($diaries as $diary): ?>
-            <div class="col-md-6 col-lg-4">
+            <div class="col-md-6 col-lg-4"  onclick="window.location.href='lessons.php?diary_id=<?php echo $diary['id']; ?>'">
                 <div class="diary-card" style="border-left-color: <?php echo $diary['category_color'] ?? '#808080'; ?>">
                     <div class="diary-name">
                         <?php echo htmlspecialchars($diary['name']); ?>
-                        <?php if ($diary['public_link']): ?>
-                            <span class="public-link-badge" title="Есть публичная ссылка">
-                                <i class="bi bi-link"></i>
-                            </span>
-                        <?php endif; ?>
+                            <?php if ($diary['public_link']): ?>
+                                <a href="<?php echo getPublicDiaryUrl($diary['public_link']); ?>" 
+                                target="_blank" 
+                                class="public-link-badge" 
+                                title="Открыть публичную ссылку"
+                                onclick="event.stopPropagation();">
+                                    <i class="bi bi-link"></i>
+                                </a>
+                            <?php endif; ?>
                     </div>
                     
                     <div class="diary-student">
@@ -1181,9 +1185,10 @@ if ($publicView) {
                                 <a href="lessons.php?diary_id=<?php echo $diary['id']; ?>" class="btn btn-sm btn-outline-success" title="Перейти к занятиям">
             <i class="bi bi-calendar-check"></i>
         </a>
+        <!--
                         <a href="?action=view&id=<?php echo $diary['id']; ?>" class="btn btn-sm btn-outline-primary" title="Просмотр">
                             <i class="bi bi-eye"></i>
-                        </a>
+                        </a>-->
                         <a href="?action=edit&id=<?php echo $diary['id']; ?>" class="btn btn-sm btn-outline-secondary" title="Редактировать">
                             <i class="bi bi-pencil"></i>
                         </a>
