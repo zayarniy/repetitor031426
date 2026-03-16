@@ -1250,8 +1250,7 @@ if ($publicView) {
                 </form>
             </div>
             
-            <!-- Список занятий по месяцам -->
-            <!-- Список занятий по месяцам -->
+            <!-- Список занятий по месяцам -->            
 <?php if (empty($lessons)): ?>
     <div class="alert alert-info text-center py-5">
         <i class="bi bi-calendar-x" style="font-size: 3rem;"></i>

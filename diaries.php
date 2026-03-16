@@ -838,6 +838,58 @@ if ($publicView) {
         .copy-link-btn {
             cursor: pointer;
         }
+
+        /* Добавьте в секцию <style> */
+.copy-notification {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Стили для блока с публичной ссылкой */
+.public-link-card {
+    background: #f8f9fa;
+    border-left: 4px solid #28a745;
+}
+
+.public-link-input-group {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.public-link-input {
+    border: 1px solid #dee2e6;
+    border-right: none;
+    font-size: 0.9em;
+}
+
+.public-link-input:focus {
+    outline: none;
+    box-shadow: none;
+    border-color: #dee2e6;
+}
+
+.btn-copy {
+    border: 1px solid #dee2e6;
+    border-left: none;
+    background: white;
+    transition: all 0.2s;
+}
+
+.btn-copy:hover {
+    background: #e9ecef;
+    color: #667eea;
+}
     </style>
 </head>
 <body>
@@ -1132,153 +1184,179 @@ if ($publicView) {
             
         <?php elseif ($action === 'add' || $action === 'edit'): ?>
             <!-- Форма добавления/редактирования дневника -->
-            <div class="row">
-                <div class="col-md-8">
-                    <div class="card">
-                        <div class="card-header bg-white">
-                            <h5 class="mb-0">
-                                <i class="bi bi-<?php echo $action === 'add' ? 'plus-circle' : 'pencil'; ?>"></i>
-                                <?php echo $action === 'add' ? 'Создание дневника' : 'Редактирование дневника'; ?>
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <form method="POST" action="">
-                                <?php if ($action === 'edit' && $editDiary): ?>
-                                    <input type="hidden" name="diary_id" value="<?php echo $editDiary['id']; ?>">
-                                <?php endif; ?>
-                                
-                                <div class="mb-3">
-                                    <label class="form-label">Название дневника *</label>
-                                    <input type="text" name="name" class="form-control" 
-                                           value="<?php echo $editDiary ? htmlspecialchars($editDiary['name']) : ''; ?>" 
-                                           required maxlength="255">
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label class="form-label">Ученик *</label>
-                                    <select name="student_id" class="form-select" required>
-                                        <option value="">Выберите ученика</option>
-                                        <?php foreach ($students as $student): ?>
-                                            <option value="<?php echo $student['id']; ?>" 
-                                                <?php echo ($editDiary && $editDiary['student_id'] == $student['id']) ? 'selected' : ''; ?>>
-                                                <?php echo htmlspecialchars($student['last_name'] . ' ' . $student['first_name'] . ' ' . ($student['middle_name'] ?? '')); ?>
-                                                <?php if ($student['class']): ?>
-                                                    (<?php echo htmlspecialchars($student['class']); ?> класс)
-                                                <?php endif; ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label class="form-label">Категория</label>
-                                    <select name="category_id" class="form-select">
-                                        <option value="">Без категории</option>
-                                        <?php foreach ($categories as $category): ?>
-                                            <option value="<?php echo $category['id']; ?>" 
-                                                <?php echo ($editDiary && $editDiary['category_id'] == $category['id']) ? 'selected' : ''; ?>>
-                                                <?php echo htmlspecialchars($category['name']); ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label class="form-label">Описание</label>
-                                    <textarea name="description" class="form-control" rows="3"><?php echo $editDiary ? htmlspecialchars($editDiary['description'] ?? '') : ''; ?></textarea>
-                                </div>
-                                
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Стоимость занятия (₽)</label>
-                                        <input type="number" name="lesson_cost" class="form-control" 
-                                               value="<?php echo $editDiary ? htmlspecialchars($editDiary['lesson_cost'] ?? '') : ''; ?>" 
-                                               step="100" min="0">
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Длительность занятия (мин)</label>
-                                        <input type="number" name="lesson_duration" class="form-control" 
-                                               value="<?php echo $editDiary ? htmlspecialchars($editDiary['lesson_duration'] ?? '60') : '60'; ?>" 
-                                               step="15" min="15">
-                                    </div>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label class="form-label">Комментарий к изменению</label>
-                                    <textarea name="comment" class="form-control" rows="2" placeholder="Что было изменено? (необязательно)"></textarea>
-                                </div>
-                                
-                                <div class="d-flex justify-content-between">
-                                    <a href="diaries.php" class="btn btn-outline-secondary">
-                                        <i class="bi bi-arrow-left"></i> Назад
-                                    </a>
-                                    <button type="submit" name="save_diary" class="btn btn-primary">
-                                        <i class="bi bi-save"></i> Сохранить
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="col-md-4">
-                    <!-- Информационный блок -->
-                    <div class="card">
-                        <div class="card-header bg-white">
-                            <h5 class="mb-0"><i class="bi bi-info-circle"></i> Информация</h5>
-                        </div>
-                        <div class="card-body">
-                            <p><strong>О дневниках:</strong></p>
-                            <ul class="small">
-                                <li>Каждый дневник привязан к конкретному ученику</li>
-                                <li>Можно создать несколько дневников для одного ученика</li>
-                                <li>Стоимость и длительность можно менять в каждом занятии</li>
-                                <li>Публичная ссылка позволяет ученику просматривать дневник</li>
-                            </ul>
-                            
-                            <?php if ($action === 'edit' && $editDiary): ?>
-                                <hr>
-                                <p><strong>Статистика:</strong></p>
-                                <p>Занятий в дневнике: <?php 
-                                    $stmt = $pdo->prepare("SELECT COUNT(*) FROM lessons WHERE diary_id = ?");
-                                    $stmt->execute([$editDiary['id']]);
-                                    echo $stmt->fetchColumn();
-                                ?></p>
-                                <p>Комментариев: <?php echo count($diaryComments); ?></p>
-                                <p>Создан: <?php echo date('d.m.Y H:i', strtotime($editDiary['created_at'])); ?></p>
-                                <p>Обновлен: <?php echo date('d.m.Y H:i', strtotime($editDiary['updated_at'])); ?></p>
-                                <?php if ($editDiary['public_link']): ?>
-    <hr>
-    <p><strong>Публичная ссылка:</strong></p>
-<div class="input-group">
-        <?php
-        // Определяем базовый URL с учетом подпапки
-        $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://';
-        $host = $_SERVER['HTTP_HOST'];
-        $scriptPath = dirname($_SERVER['SCRIPT_NAME']);
-        // Убираем последний слеш, если есть
-        $basePath = rtrim($scriptPath, '/');
-        
-        $publicUrl = $protocol . $host . $basePath . '/public_diary.php?token=' . $editDiary['public_link'];
-        ?>
-        <input type="text" class="form-control" 
-               value="<?php echo $publicUrl; ?>" 
-               id="publicLink" readonly>
-        <button class="btn btn-outline-primary copy-link-btn" type="button" onclick="copyPublicLink()">
-            <i class="bi bi-files"></i> Копировать
-        </button>
-    </div>
-    <small class="text-muted">
-        <i class="bi bi-info-circle"></i> 
-        По этой ссылке ученик может просматривать дневник без авторизации
-    </small>
-<?php endif; ?>
 
-                            <?php endif; ?>
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-<?php echo $action === 'add' ? 'plus-circle' : 'pencil'; ?>"></i>
+                        <?php echo $action === 'add' ? 'Создание дневника' : 'Редактирование дневника'; ?>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="">
+                        <?php if ($action === 'edit' && $editDiary): ?>
+                            <input type="hidden" name="diary_id" value="<?php echo $editDiary['id']; ?>">
+                        <?php endif; ?>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Название дневника *</label>
+                            <input type="text" name="name" class="form-control" 
+                                   value="<?php echo $editDiary ? htmlspecialchars($editDiary['name']) : ''; ?>" 
+                                   required maxlength="255">
                         </div>
-                    </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Ученик *</label>
+                            <select name="student_id" class="form-select" required>
+                                <option value="">Выберите ученика</option>
+                                <?php foreach ($students as $student): ?>
+                                    <option value="<?php echo $student['id']; ?>" 
+                                        <?php echo ($editDiary && $editDiary['student_id'] == $student['id']) ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($student['last_name'] . ' ' . $student['first_name'] . ' ' . ($student['middle_name'] ?? '')); ?>
+                                        <?php if ($student['class']): ?>
+                                            (<?php echo htmlspecialchars($student['class']); ?> класс)
+                                        <?php endif; ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Категория</label>
+                            <select name="category_id" class="form-select">
+                                <option value="">Без категории</option>
+                                <?php foreach ($categories as $category): ?>
+                                    <option value="<?php echo $category['id']; ?>" 
+                                        <?php echo ($editDiary && $editDiary['category_id'] == $category['id']) ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($category['name']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Описание</label>
+                            <textarea name="description" class="form-control" rows="3"><?php echo $editDiary ? htmlspecialchars($editDiary['description'] ?? '') : ''; ?></textarea>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Стоимость занятия (₽)</label>
+                                <input type="number" name="lesson_cost" class="form-control" 
+                                       value="<?php echo $editDiary ? htmlspecialchars($editDiary['lesson_cost'] ?? '') : ''; ?>" 
+                                       step="100" min="0">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Длительность занятия (мин)</label>
+                                <input type="number" name="lesson_duration" class="form-control" 
+                                       value="<?php echo $editDiary ? htmlspecialchars($editDiary['lesson_duration'] ?? '60') : '60'; ?>" 
+                                       step="15" min="0">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Комментарий к изменению</label>
+                            <textarea name="comment" class="form-control" rows="2" placeholder="Что было изменено? (необязательно)"></textarea>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="diaries.php" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left"></i> Назад
+                            </a>
+                            <button type="submit" name="save_diary" class="btn btn-primary">
+                                <i class="bi bi-save"></i> Сохранить
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
+        </div>
+        
+        <div class="col-md-4">
+            <!-- Блок с публичной ссылкой (только для режима редактирования) -->
+            <?php if ($action === 'edit' && $editDiary): ?>
+                <div class="card mb-3">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0"><i class="bi bi-link"></i> Публичная ссылка</h5>
+                    </div>
+                    <div class="card-body">
+                        <?php if ($editDiary['public_link']): 
+                            // Формируем полный URL с учетом подпапки
+                            $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://';
+                            $host = $_SERVER['HTTP_HOST'];
+                            $scriptPath = dirname($_SERVER['SCRIPT_NAME']);
+                            $basePath = rtrim($scriptPath, '/');
+                            $publicUrl = $protocol . $host . $basePath . '/public_diary.php?token=' . $editDiary['public_link'];
+                        ?>
+                            <p class="text-muted small">По этой ссылке ученик может просматривать дневник без авторизации:</p>
+                            <div class="input-group mb-2">
+                                <input type="text" class="form-control form-control-sm" 
+                                       value="<?php echo $publicUrl; ?>" 
+                                       id="publicLink" readonly>
+                                <button class="btn btn-sm btn-outline-primary" type="button" onclick="copyPublicLink()">
+                                    <i class="bi bi-files"></i>
+                                </button>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">
+                                    <i class="bi bi-info-circle"></i> 
+                                    Ссылка действительна, пока вы её не удалите
+                                </small>
+                                <a href="?remove_link=1&id=<?php echo $editDiary['id']; ?>" 
+                                   class="btn btn-sm btn-outline-danger" 
+                                   onclick="return confirm('Удалить публичную ссылку? После удаления старая ссылка перестанет работать.')">
+                                    <i class="bi bi-trash"></i> Удалить
+                                </a>
+                            </div>
+                        <?php else: ?>
+                            <p class="text-muted small">Создайте публичную ссылку, чтобы ученик мог просматривать дневник:</p>
+                            <a href="?generate_link=1&id=<?php echo $editDiary['id']; ?>" 
+                               class="btn btn-success w-100"
+                               onclick="return confirm('Создать публичную ссылку для этого дневника?')">
+                                <i class="bi bi-link-45deg"></i> Сгенерировать ссылку
+                            </a>
+                            <small class="text-muted d-block mt-2">
+                                <i class="bi bi-info-circle"></i> 
+                                Ссылка будет доступна только для просмотра, без возможности редактирования
+                            </small>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+            
+            <!-- Информационный блок -->
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> Информация</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>О дневниках:</strong></p>
+                    <ul class="small">
+                        <li>Каждый дневник привязан к конкретному ученику</li>
+                        <li>Можно создать несколько дневников для одного ученика</li>
+                        <li>Стоимость и длительность можно менять в каждом занятии</li>
+                        <li>Публичная ссылка позволяет ученику просматривать дневник</li>
+                    </ul>
+                    
+                    <?php if ($action === 'edit' && $editDiary): ?>
+                        <hr>
+                        <p><strong>Статистика:</strong></p>
+                        <p>Занятий в дневнике: <?php 
+                            $stmt = $pdo->prepare("SELECT COUNT(*) FROM lessons WHERE diary_id = ?");
+                            $stmt->execute([$editDiary['id']]);
+                            echo $stmt->fetchColumn();
+                        ?></p>
+                        <p>Комментариев: <?php echo count($diaryComments); ?></p>
+                        <p>Создан: <?php echo date('d.m.Y H:i', strtotime($editDiary['created_at'])); ?></p>
+                        <p>Обновлен: <?php echo date('d.m.Y H:i', strtotime($editDiary['updated_at'])); ?></p>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+
             
         <?php elseif ($action === 'view' && $editDiary): ?>
             <!-- Просмотр дневника -->
@@ -1349,18 +1427,22 @@ if ($publicView) {
                                 <p><?php echo nl2br(htmlspecialchars($editDiary['description'])); ?></p>
                             <?php endif; ?>
                             
-                            <?php if ($editDiary['public_link']): ?>
-                                <hr>
-                                <p><strong>Публичная ссылка:</strong></p>
-                                <div class="input-group">
-                                    <input type="text" class="form-control" 
-                                           value="<?php echo $_SERVER['REQUEST_SCHEME'] . '://' . $_SERVER['HTTP_HOST'] . '/diaries.php?public=1&token=' . $editDiary['public_link']; ?>" 
-                                           id="publicLink" readonly>
-                                    <button class="btn btn-outline-primary copy-link-btn" type="button" onclick="copyPublicLink()">
-                                        <i class="bi bi-files"></i> Копировать
-                                    </button>
-                                </div>
-                            <?php endif; ?>
+<?php if ($editDiary['public_link']): ?>
+                        <hr>
+                        <p><strong>Публичная ссылка:</strong></p>
+                        <div class="input-group">
+                            <input type="text" class="form-control" 
+                                   value="<?php echo getPublicDiaryUrl($editDiary['public_link']); ?>" 
+                                   id="publicLinkView" readonly>
+                            <button class="btn btn-outline-primary" type="button" onclick="copyPublicLink('publicLinkView')">
+                                <i class="bi bi-files"></i> Копировать
+                            </button>
+                        </div>
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle"></i> 
+                            По этой ссылке ученик может просматривать дневник без авторизации
+                        </small>
+                    <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -1546,20 +1628,58 @@ if ($publicView) {
     <script>
 function copyPublicLink() {
     const linkInput = document.getElementById('publicLink');
-    linkInput.select();
-    document.execCommand('copy');
+    if (!linkInput) return;
     
-    // Показываем уведомление
+    linkInput.select();
+    linkInput.setSelectionRange(0, 99999); // Для мобильных устройств
+    
+    try {
+        // Современный метод копирования
+        navigator.clipboard.writeText(linkInput.value).then(() => {
+            showCopyNotification('Ссылка скопирована!');
+        }).catch(err => {
+            // Fallback для старых браузеров
+            document.execCommand('copy');
+            showCopyNotification('Ссылка скопирована!');
+        });
+    } catch (err) {
+        // Еще один fallback
+        document.execCommand('copy');
+        showCopyNotification('Ссылка скопирована!');
+    }
+}
+
+function showCopyNotification(message) {
+    // Удаляем предыдущее уведомление, если есть
+    const oldAlert = document.querySelector('.copy-notification');
+    if (oldAlert) oldAlert.remove();
+    
     const alert = document.createElement('div');
-    alert.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 end-0 m-3';
+    alert.className = 'alert alert-success alert-dismissible fade show copy-notification position-fixed top-0 end-0 m-3';
     alert.style.zIndex = '9999';
-    alert.innerHTML = 'Ссылка скопирована! <button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+    alert.style.boxShadow = '0 4px 15px rgba(0,0,0,0.2)';
+    alert.style.minWidth = '250px';
+    alert.innerHTML = `
+        <div class="d-flex align-items-center">
+            <i class="bi bi-check-circle-fill me-2"></i>
+            <span>${message}</span>
+            <button type="button" class="btn-close ms-3" data-bs-dismiss="alert"></button>
+        </div>
+    `;
     document.body.appendChild(alert);
     
     setTimeout(() => {
         alert.remove();
     }, 3000);
 }
+
+// Добавляем обработчик для кнопки копирования через Enter
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && e.target.classList.contains('copy-link-btn')) {
+        e.preventDefault();
+        copyPublicLink();
+    }
+});
     </script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>    

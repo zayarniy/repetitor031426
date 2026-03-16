@@ -192,11 +192,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <input type="password" name="password" class="form-control" placeholder="Пароль" required value="123">
                     </div>
                     <button type="submit" name="login" class="btn btn-login mb-3">Войти</button>
-                </form>
-                
-                <div class="text-center mb-3">
-                    <span style="color: #999;">или</span>
-                </div>
+                </form>                
                 
                 <!-- Форма регистрации (заглушка) -->
                 <form method="POST" action="" id="registerForm" style="display: none;">
@@ -229,11 +225,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <a href="#" onclick="showForm('reset')">Забыли пароль?</a>
                 </div>
                 
-                <div class="mt-3 text-center">
-                    <small class="text-muted">
-                        Тестовый доступ: admin@example.com / 123
-                    </small>
-                </div>
             </div>
         </div>
     </div>

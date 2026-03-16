@@ -10,7 +10,6 @@ if (empty($token)) {
 }
 
 // Получаем информацию о дневнике по публичной ссылке
-// Убираем проверку is_active, так как этого поля нет в таблице diaries
 $stmt = $pdo->prepare("
     SELECT 
         d.*,
@@ -37,21 +36,22 @@ if (!$diary) {
     $error = 'Дневник не найден или ссылка недействительна';
 }
 
-// Проверяем, активен ли ученик (опционально)
+// Проверяем, активен ли ученик
 if ($diary && !$diary['student_is_active']) {
     $error = 'Ученик не активен. Дневник временно недоступен.';
 }
 
-// Получаем последние 20 занятий из этого дневника
+// Получаем последние 20 занятий из этого дневника с категориями тем
 $lessons = [];
 if ($diary && !isset($error)) {
     $stmt = $pdo->prepare("
         SELECT 
             l.*,
-            GROUP_CONCAT(DISTINCT t.name SEPARATOR ', ') as topic_names
+            GROUP_CONCAT(DISTINCT CONCAT(t.id, '|', t.name, '|', COALESCE(c.name, 'Без категории'), '|', COALESCE(c.color, '#808080')) SEPARATOR '||') as topics_with_categories
         FROM lessons l
         LEFT JOIN lesson_topics lt ON l.id = lt.lesson_id
         LEFT JOIN topics t ON lt.topic_id = t.id
+        LEFT JOIN categories c ON t.category_id = c.id
         WHERE l.diary_id = ?
         GROUP BY l.id
         ORDER BY l.lesson_date DESC, l.start_time DESC
@@ -61,6 +61,27 @@ if ($diary && !isset($error)) {
     $lessons = $stmt->fetchAll();
 }
 
+// Функция для парсинга тем с категориями
+function parseTopicsWithCategories($topicsString) {
+    $result = [];
+    if (empty($topicsString)) return $result;
+    
+    $topics = explode('||', $topicsString);
+    foreach ($topics as $topic) {
+        if (empty($topic)) continue;
+        $parts = explode('|', $topic);
+        if (count($parts) >= 4) {
+            $result[] = [
+                'id' => $parts[0],
+                'name' => $parts[1],
+                'category' => $parts[2],
+                'color' => $parts[3]
+            ];
+        }
+    }
+    return $result;
+}
+
 // Группировка занятий по месяцам
 $groupedLessons = [];
 foreach ($lessons as $lesson) {
@@ -68,6 +89,24 @@ foreach ($lessons as $lesson) {
     if (!isset($groupedLessons[$month])) {
         $groupedLessons[$month] = [];
     }
+    
+    // Парсим темы с категориями
+    $lesson['topics_parsed'] = parseTopicsWithCategories($lesson['topics_with_categories']);
+    
+    // Группируем темы по категориям для этого занятия
+    $groupedTopics = [];
+    foreach ($lesson['topics_parsed'] as $topic) {
+        $category = $topic['category'];
+        if (!isset($groupedTopics[$category])) {
+            $groupedTopics[$category] = [
+                'color' => $topic['color'],
+                'topics' => []
+            ];
+        }
+        $groupedTopics[$category]['topics'][] = $topic['name'];
+    }
+    $lesson['topics_by_category'] = $groupedTopics;
+    
     $groupedLessons[$month][] = $lesson;
 }
 
@@ -78,6 +117,9 @@ $cancelledLessons = 0;
 $avgGrade = 0;
 $gradeSum = 0;
 $gradeCount = 0;
+
+// Статистика по категориям тем
+$categoryStats = [];
 
 foreach ($lessons as $lesson) {
     if ($lesson['is_completed']) {
@@ -90,6 +132,23 @@ foreach ($lessons as $lesson) {
         $gradeSum += $lesson['grade_lesson'];
         $gradeCount++;
     }
+    
+    // Собираем статистику по категориям
+    $topics = parseTopicsWithCategories($lesson['topics_with_categories']);
+    foreach ($topics as $topic) {
+        $category = $topic['category'];
+        if (!isset($categoryStats[$category])) {
+            $categoryStats[$category] = [
+                'count' => 0,
+                'color' => $topic['color'],
+                'topics' => []
+            ];
+        }
+        $categoryStats[$category]['count']++;
+        if (!in_array($topic['name'], $categoryStats[$category]['topics'])) {
+            $categoryStats[$category]['topics'][] = $topic['name'];
+        }
+    }
 }
 
 $avgGrade = $gradeCount > 0 ? round($gradeSum / $gradeCount, 1) : 0;
@@ -101,7 +160,6 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Публичный дневник - <?php echo $diary ? htmlspecialchars($diary['name']) : 'Дневник не найден'; ?></title>
-    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <style>
@@ -193,6 +251,21 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
             font-size: 0.9em;
         }
         
+        .category-stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .category-stat-item {
+            background: #f8f9fa;
+            border-radius: 20px;
+            padding: 8px 15px;
+            border-left: 4px solid;
+            font-size: 0.9em;
+        }
+        
         .lesson-card {
             background: white;
             border-radius: 15px;
@@ -250,14 +323,37 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
         .grade-1 { background: #dc3545; color: white; }
         .grade-0 { background: #6c757d; color: white; }
         
+        .category-section {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 10px;
+            background: #f8f9fa;
+        }
+        
+        .category-title {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        .category-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            margin-right: 8px;
+        }
+        
         .topic-badge {
-            background: #e9ecef;
+            background: white;
             border-radius: 15px;
-            padding: 2px 10px;
-            font-size: 0.8em;
+            padding: 4px 12px;
+            font-size: 0.85em;
             display: inline-block;
             margin-right: 5px;
             margin-bottom: 5px;
+            border-left: 3px solid;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         
         .month-header {
@@ -327,6 +423,16 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
             transform: translateY(-2px);
             color: white;
         }
+        
+        .tooltip-inner {
+            background-color: #333;
+        }
+        
+        .stat-highlight {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #667eea;
+        }
     </style>
 </head>
 <body>
@@ -338,7 +444,7 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
                 <h1 class="mt-3">Дневник не найден</h1>
                 <p class="text-muted"><?php echo htmlspecialchars($error); ?></p>
                 <p>Возможно, ссылка устарела или была удалена.</p>
-                <a href="/" class="btn-public">
+                <a href="<?php echo dirname($_SERVER['SCRIPT_NAME']); ?>/" class="btn-public">
                     <i class="bi bi-house"></i> На главную
                 </a>
             </div>
@@ -403,6 +509,22 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
                 </div>
             </div>
             
+            <!-- Статистика по категориям -->
+            <?php if (!empty($categoryStats)): ?>
+            <div class="stats-card mb-4">
+                <h5><i class="bi bi-tags"></i> Изучаемые темы по категориям</h5>
+                <div class="category-stats">
+                    <?php foreach ($categoryStats as $category => $stat): ?>
+                        <div class="category-stat-item" style="border-left-color: <?php echo $stat['color']; ?>;" 
+                             title="<?php echo htmlspecialchars(implode(', ', $stat['topics'])); ?>">
+                            <span class="stat-highlight"><?php echo htmlspecialchars($category); ?></span>
+                            <span class="badge bg-secondary ms-2"><?php echo $stat['count']; ?></span>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+            
             <!-- Информация о дневнике -->
             <div class="row mb-4">
                 <div class="col-md-6">
@@ -410,12 +532,12 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
                         <h5><i class="bi bi-info-circle"></i> Информация о занятиях</h5>
                         <!--
                         <div class="info-item">
-                            
                             <span class="info-label">Стоимость занятия:</span>
                             <span class="info-value float-end">
                                 <?php echo $diary['lesson_cost'] ? number_format($diary['lesson_cost'], 0, ',', ' ') . ' ₽' : 'Не указана'; ?>
-                            </span>-
-                        </div>-->
+                            </span>
+                        </div>
+                    -->
                         <div class="info-item">
                             <span class="info-label">Длительность занятия:</span>
                             <span class="info-value float-end">
@@ -525,22 +647,26 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
                                     <?php endif; ?>
                                 </div>
                                 
-                                <div class="col-md-4">
-                                    <?php if (!empty($lesson['topic_names'])): ?>
+                                <div class="col-md-5">
+                                    <!-- Темы, сгруппированные по категориям -->
+                                    <?php if (!empty($lesson['topics_by_category'])): ?>
                                         <div class="mb-2">
                                             <small class="text-muted"><i class="bi bi-book"></i> Темы:</small>
-                                            <div class="mt-1">
-                                                <?php 
-                                                $topics = explode(',', $lesson['topic_names']);
-                                                foreach ($topics as $topic):
-                                                    if (trim($topic)):
-                                                ?>
-                                                    <span class="topic-badge"><?php echo htmlspecialchars(trim($topic)); ?></span>
-                                                <?php 
-                                                    endif;
-                                                endforeach; 
-                                                ?>
-                                            </div>
+                                            <?php foreach ($lesson['topics_by_category'] as $category => $data): ?>
+                                                <div class="category-section">
+                                                    <div class="category-title">
+                                                        <div class="category-color" style="background: <?php echo $data['color']; ?>;"></div>
+                                                        <?php echo htmlspecialchars($category); ?>
+                                                    </div>
+                                                    <div>
+                                                        <?php foreach ($data['topics'] as $topic): ?>
+                                                            <span class="topic-badge" style="border-left-color: <?php echo $data['color']; ?>;">
+                                                                <?php echo htmlspecialchars($topic); ?>
+                                                            </span>
+                                                        <?php endforeach; ?>
+                                                    </div>
+                                                </div>
+                                            <?php endforeach; ?>
                                         </div>
                                     <?php endif; ?>
                                     
@@ -563,13 +689,13 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
                                     <?php endif; ?>
                                 </div>
                                 
-                                <div class="col-md-3">
+                                <div class="col-md-2">
                                     <?php if (!empty($lesson['link_url'])): ?>
                                         <div class="mb-2">
                                             <small class="text-muted"><i class="bi bi-link"></i> Ссылка:</small>
                                             <div>
                                                 <a href="<?php echo htmlspecialchars($lesson['link_url']); ?>" target="_blank" class="small text-break">
-                                                    <?php echo htmlspecialchars($lesson['link_url']); ?>
+                                                    <?php echo htmlspecialchars(substr($lesson['link_url'], 0, 30) . (strlen($lesson['link_url']) > 30 ? '...' : '')); ?>
                                                 </a>
                                             </div>
                                             <?php if (!empty($lesson['link_comment'])): ?>
@@ -594,5 +720,12 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Инициализация всплывающих подсказок
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function(tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    </script>
 </body>
 </html>
