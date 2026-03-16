@@ -41,7 +41,7 @@ if ($diary && !$diary['student_is_active']) {
     $error = 'Ученик не активен. Дневник временно недоступен.';
 }
 
-// Получаем последние 20 занятий из этого дневника с категориями тем
+// Получаем все занятий из этого дневника с категориями тем
 $lessons = [];
 if ($diary && !isset($error)) {
     $stmt = $pdo->prepare("
@@ -55,7 +55,6 @@ if ($diary && !isset($error)) {
         WHERE l.diary_id = ?
         GROUP BY l.id
         ORDER BY l.lesson_date DESC, l.start_time DESC
-        LIMIT 20
     ");
     $stmt->execute([$diary['id']]);
     $lessons = $stmt->fetchAll();
@@ -120,6 +119,9 @@ $cancelledLessons = 0;
 $avgGrade = 0;
 $gradeSum = 0;
 $gradeCount = 0;
+
+$firstLessonDate = null;
+$lastLessonDate = null;
 
 // Статистика по категориям тем
 $categoryStats = [];
@@ -202,6 +204,64 @@ function extractLinks($text)
 
 $avgGrade = $gradeCount > 0 ? round($gradeSum / $gradeCount, 1) : 0;
 $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons) * 100) : 0;
+
+// Получаем все занятий из этого дневника с категориями тем
+$lessons = [];
+$totalMinutes = 0;
+$totalPaid = 0;
+$totalCost = 0;
+
+if ($diary && !isset($error)) {
+    $stmt = $pdo->prepare("
+        SELECT 
+            l.*,
+            GROUP_CONCAT(DISTINCT CONCAT(t.id, '|', t.name, '|', COALESCE(c.name, 'Без категории'), '|', COALESCE(c.color, '#808080')) SEPARATOR '||') as topics_with_categories
+        FROM lessons l
+        LEFT JOIN lesson_topics lt ON l.id = lt.lesson_id
+        LEFT JOIN topics t ON lt.topic_id = t.id
+        LEFT JOIN categories c ON t.category_id = c.id
+        WHERE l.diary_id = ?
+        GROUP BY l.id
+        ORDER BY l.lesson_date DESC, l.start_time DESC
+    ");
+    $stmt->execute([$diary['id']]);
+    $lessons = $stmt->fetchAll();
+    
+    // Рассчитываем общую статистику
+    foreach ($lessons as $lesson) {
+        if ($lesson['duration'] && $lesson['is_completed']) {
+            $totalMinutes += $lesson['duration'];
+        }
+        if ($lesson['cost']) {
+            $totalCost += $lesson['cost'];
+            if ($lesson['is_paid']) {
+                $totalPaid += $lesson['cost'];
+            }
+        }
+    }
+}
+
+// Форматируем общее время
+$totalHours = floor($totalMinutes / 60);
+$totalMinutesRemainder = $totalMinutes % 60;
+$totalTimeFormatted = '';
+if ($totalHours > 0) {
+    $totalTimeFormatted .= $totalHours . ' ч ';
+}
+if ($totalMinutesRemainder > 0 || $totalHours == 0) {
+    $totalTimeFormatted .= $totalMinutesRemainder . ' мин';
+}
+
+// Получаем дату первого занятия
+$stmt = $pdo->prepare("
+        SELECT MIN(lesson_date) as first_date, MAX(lesson_date) as last_date
+        FROM lessons 
+        WHERE diary_id = ? AND lesson_date IS NOT NULL
+    ");
+    $stmt->execute([$diary['id']]);
+    $dates = $stmt->fetch();
+    $firstLessonDate = $dates['first_date'];
+    $lastLessonDate = $dates['last_date'];
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -590,21 +650,7 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
                 </div>
             </div>
 
-            <!-- Статистика по категориям -->
-            <?php if (!empty($categoryStats)): ?>
-                <div class="stats-card mb-4">
-                    <h5><i class="bi bi-tags"></i> Изучаемые темы по категориям</h5>
-                    <div class="category-stats">
-                        <?php foreach ($categoryStats as $category => $stat): ?>
-                            <div class="category-stat-item" style="border-left-color: <?php echo $stat['color']; ?>;"
-                                title="<?php echo htmlspecialchars(implode(', ', $stat['topics'])); ?>">
-                                <span class="stat-highlight"><?php echo htmlspecialchars($category); ?></span>
-                                <span class="badge bg-secondary ms-2"><?php echo $stat['count']; ?></span>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-            <?php endif; ?>
+
 
             <!-- Информация о дневнике -->
             <div class="row mb-4">
@@ -620,12 +666,12 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
                         </div>
                     -->
                         <div class="info-item">
-                            <span class="info-label">Длительность занятия:</span>
+                            <span class="info-label">Общее время:</span>
                             <span class="info-value float-end">
                                 <?php
                                 if ($diary['lesson_duration']) {
-                                    $hours = floor($diary['lesson_duration'] / 60);
-                                    $minutes = $diary['lesson_duration'] % 60;
+                                    $hours = floor($totalMinutes / 60);
+                                    $minutes = $totalMinutes % 60;
                                     echo ($hours > 0 ? $hours . ' ч ' : '') . ($minutes > 0 ? $minutes . ' мин' : '');
                                 } else {
                                     echo 'Не указана';
@@ -634,9 +680,14 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
                             </span>
                         </div>
                         <div class="info-item">
-                            <span class="info-label">Дата создания:</span>
+                            <span class="info-label">Первое занятие:</span>
                             <span
-                                class="info-value float-end"><?php echo date('d.m.Y', strtotime($diary['created_at'])); ?></span>
+                                class="info-value float-end"><?php echo $firstLessonDate ? date('d.m.Y', strtotime($firstLessonDate)):"Нет данных"; ?></span>
+                        </div>
+                                                <div class="info-item">
+                            <span class="info-label">Последнее занятие:</span>
+                            <span
+                                class="info-value float-end"><?php echo $lastLessonDate ? date('d.m.Y', strtotime($lastLessonDate)):"Нет данных"; ?></span>
                         </div>
                         <div class="info-item">
                             <span class="info-label">Последнее обновление:</span>
@@ -672,7 +723,21 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
                     </div>
                 </div>
             </div>
-
+            <!-- Статистика по категориям -->
+            <?php if (!empty($categoryStats)): ?>
+                <div class="stats-card mb-4">
+                    <h5><i class="bi bi-tags"></i> Изучаемые темы по категориям</h5>
+                    <div class="category-stats">
+                        <?php foreach ($categoryStats as $category => $stat): ?>
+                            <div class="category-stat-item" style="border-left-color: <?php echo $stat['color']; ?>;"
+                                title="<?php echo htmlspecialchars(implode(', ', $stat['topics'])); ?>">
+                                <span class="stat-highlight"><?php echo htmlspecialchars($category); ?></span>
+                                <span class="badge bg-secondary ms-2"><?php echo $stat['count']; ?></span>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
             <!-- Список занятий -->
             <h3 class="mb-3"><i class="bi bi-calendar-check"></i> Последние занятия</h3>
 
