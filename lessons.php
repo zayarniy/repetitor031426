@@ -23,7 +23,7 @@ if ($diaryId) {
     ");
     $stmt->execute([$diaryId, $userId]);
     $diary = $stmt->fetch();
-    
+
     if (!$diary) {
         header('Location: diaries.php');
         exit();
@@ -159,30 +159,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_lesson'])) {
     $startTime = $_POST['start_time'] ?? '12:00:00';
     $duration = intval($_POST['duration'] ?? $diary['lesson_duration'] ?? 60);
     $cost = !empty($_POST['cost']) ? floatval($_POST['cost']) : ($diary['lesson_cost'] ?? null);
-    
+
     $topicsManual = trim($_POST['topics_manual'] ?? '');
     $homeworkManual = trim($_POST['homework_manual'] ?? '');
     $comment = trim($_POST['comment'] ?? '');
-    
+
     $linkUrl = trim($_POST['link_url'] ?? '');
     $linkComment = trim($_POST['link_comment'] ?? '');
-    
+
     $gradeLesson = isset($_POST['grade_lesson']) && $_POST['grade_lesson'] !== '' ? intval($_POST['grade_lesson']) : null;
     $gradeComment = trim($_POST['grade_comment'] ?? '');
     $gradeHomework = isset($_POST['grade_homework']) && $_POST['grade_homework'] !== '' ? intval($_POST['grade_homework']) : null;
     $homeworkComment = trim($_POST['homework_comment'] ?? '');
-    
+
     $isCancelled = isset($_POST['is_cancelled']) ? 1 : 0;
     $isCompleted = isset($_POST['is_completed']) ? 1 : 0;
     $isPaid = isset($_POST['is_paid']) ? 1 : 0;
-    
+
     $selectedTopics = $_POST['topics'] ?? [];
     $selectedResources = $_POST['resources'] ?? [];
     $resourceComments = $_POST['resource_comments'] ?? [];
-    
+
     try {
         $pdo->beginTransaction();
-        
+
         if ($lessonId) {
             // Обновление существующего занятия
             $stmt = $pdo->prepare("
@@ -197,21 +197,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_lesson'])) {
                 WHERE l.id = ? AND d.user_id = ?
             ");
             $stmt->execute([
-                $lessonDate, $startTime, $duration, $cost,
-                $topicsManual, $homeworkManual, $comment,
-                $linkUrl, $linkComment,
-                $gradeLesson, $gradeComment, $gradeHomework, $homeworkComment,
-                $isCancelled, $isCompleted, $isPaid,
-                $lessonId, $userId
+                $lessonDate,
+                $startTime,
+                $duration,
+                $cost,
+                $topicsManual,
+                $homeworkManual,
+                $comment,
+                $linkUrl,
+                $linkComment,
+                $gradeLesson,
+                $gradeComment,
+                $gradeHomework,
+                $homeworkComment,
+                $isCancelled,
+                $isCompleted,
+                $isPaid,
+                $lessonId,
+                $userId
             ]);
-            
+
             // Удаляем старые связи
             $stmt = $pdo->prepare("DELETE FROM lesson_topics WHERE lesson_id = ?");
             $stmt->execute([$lessonId]);
-            
+
             $stmt = $pdo->prepare("DELETE FROM lesson_resources WHERE lesson_id = ?");
             $stmt->execute([$lessonId]);
-            
+
             $message = 'Занятие обновлено';
         } else {
             // Создание нового занятия
@@ -225,17 +237,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_lesson'])) {
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
             $stmt->execute([
-                $diaryId, $diary['student_id'],
-                $lessonDate, $startTime, $duration, $cost,
-                $topicsManual, $homeworkManual, $comment,
-                $linkUrl, $linkComment,
-                $gradeLesson, $gradeComment, $gradeHomework, $homeworkComment,
-                $isCancelled, $isCompleted, $isPaid
+                $diaryId,
+                $diary['student_id'],
+                $lessonDate,
+                $startTime,
+                $duration,
+                $cost,
+                $topicsManual,
+                $homeworkManual,
+                $comment,
+                $linkUrl,
+                $linkComment,
+                $gradeLesson,
+                $gradeComment,
+                $gradeHomework,
+                $homeworkComment,
+                $isCancelled,
+                $isCompleted,
+                $isPaid
             ]);
             $lessonId = $pdo->lastInsertId();
             $message = 'Занятие добавлено';
         }
-        
+
         // Добавляем выбранные темы
         if (!empty($selectedTopics)) {
             $stmt = $pdo->prepare("INSERT INTO lesson_topics (lesson_id, topic_id) VALUES (?, ?)");
@@ -243,7 +267,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_lesson'])) {
                 $stmt->execute([$lessonId, $topicId]);
             }
         }
-        
+
         // Добавляем выбранные ресурсы с комментариями
         if (!empty($selectedResources)) {
             $stmt = $pdo->prepare("INSERT INTO lesson_resources (lesson_id, resource_id, comment) VALUES (?, ?, ?)");
@@ -252,7 +276,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_lesson'])) {
                 $stmt->execute([$lessonId, $resourceId, $comment]);
             }
         }
-        
+
         // Сохраняем домашнее задание в общий банк для поиска
         if (!empty($homeworkManual)) {
             $stmt = $pdo->prepare("
@@ -261,11 +285,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_lesson'])) {
             ");
             $stmt->execute([$userId, $lessonId, $homeworkManual]);
         }
-        
+
         $pdo->commit();
         header('Location: lessons.php?diary_id=' . $diaryId . '&message=saved');
         exit();
-        
+
     } catch (Exception $e) {
         $pdo->rollBack();
         $error = 'Ошибка при сохранении: ' . $e->getMessage();
@@ -286,13 +310,13 @@ if ($lessonId) {
     ");
     $stmt->execute([$lessonId, $userId]);
     $editLesson = $stmt->fetch();
-    
+
     if ($editLesson) {
         // Получаем выбранные темы
         $stmt = $pdo->prepare("SELECT topic_id FROM lesson_topics WHERE lesson_id = ?");
         $stmt->execute([$lessonId]);
         $selectedTopicIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
-        
+
         // Получаем выбранные ресурсы с комментариями
         $stmt = $pdo->prepare("SELECT resource_id, comment FROM lesson_resources WHERE lesson_id = ?");
         $stmt->execute([$lessonId]);
@@ -373,12 +397,12 @@ if ($publicView) {
     ");
     $stmt->execute([$token]);
     $publicLesson = $stmt->fetch();
-    
+
     if (!$publicLesson) {
         header('Location: diaries.php');
         exit();
     }
-    
+
     // Получаем темы для публичного просмотра
     $stmt = $pdo->prepare("
         SELECT t.name 
@@ -389,9 +413,126 @@ if ($publicView) {
     $stmt->execute([$publicLesson['id']]);
     $publicTopics = $stmt->fetchAll(PDO::FETCH_COLUMN);
 }
+
+// Копирование занятия
+if (isset($_GET['copy']) && $lessonId) {
+    try {
+        $pdo->beginTransaction();
+
+        // Получаем исходное занятие
+        $stmt = $pdo->prepare("
+            SELECT l.* 
+            FROM lessons l
+            JOIN diaries d ON l.diary_id = d.id
+            WHERE l.id = ? AND d.user_id = ?
+        ");
+        $stmt->execute([$lessonId, $userId]);
+        $sourceLesson = $stmt->fetch();
+
+        if ($sourceLesson) {
+            // Создаем копию занятия (дату можно изменить позже)
+            $newDate = date('Y-m-d', strtotime('+7 days')); // Через неделю
+
+            $stmt = $pdo->prepare("
+                INSERT INTO lessons (
+                    diary_id, student_id, lesson_date, start_time, duration, cost,
+                    topics_manual, homework_manual, comment,
+                    link_url, link_comment,
+                    grade_lesson, grade_comment, grade_homework, homework_comment,
+                    is_cancelled, is_completed, is_paid
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+
+            $stmt->execute([
+                $sourceLesson['diary_id'],
+                $sourceLesson['student_id'],
+                $newDate,
+                $sourceLesson['start_time'],
+                $sourceLesson['duration'],
+                $sourceLesson['cost'],
+                $sourceLesson['topics_manual'],
+                $sourceLesson['homework_manual'],
+                $sourceLesson['comment'],
+                $sourceLesson['link_url'],
+                $sourceLesson['link_comment'],
+                null, // grade_lesson - не копируем оценки
+                '',
+                null, // grade_homework
+                '',
+                0, // is_cancelled
+                0, // is_completed
+                0  // is_paid
+            ]);
+
+            $newLessonId = $pdo->lastInsertId();
+
+            // Копируем связи с темами
+            $stmt = $pdo->prepare("SELECT topic_id FROM lesson_topics WHERE lesson_id = ?");
+            $stmt->execute([$lessonId]);
+            $topics = $stmt->fetchAll();
+
+            if (!empty($topics)) {
+                $insertStmt = $pdo->prepare("INSERT INTO lesson_topics (lesson_id, topic_id) VALUES (?, ?)");
+                foreach ($topics as $topic) {
+                    $insertStmt->execute([$newLessonId, $topic['topic_id']]);
+                }
+            }
+
+            // Копируем связи с ресурсами
+            $stmt = $pdo->prepare("SELECT resource_id, comment FROM lesson_resources WHERE lesson_id = ?");
+            $stmt->execute([$lessonId]);
+            $resources = $stmt->fetchAll();
+
+            if (!empty($resources)) {
+                $insertStmt = $pdo->prepare("INSERT INTO lesson_resources (lesson_id, resource_id, comment) VALUES (?, ?, ?)");
+                foreach ($resources as $resource) {
+                    $insertStmt->execute([$newLessonId, $resource['resource_id'], $resource['comment']]);
+                }
+            }
+
+            $pdo->commit();
+            header('Location: lessons.php?diary_id=' . $diaryId . '&message=copied');
+            exit();
+        }
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        $error = 'Ошибка при копировании: ' . $e->getMessage();
+    }
+}
+
+// Удаление занятия
+if (isset($_GET['delete']) && $lessonId) {
+    try {
+        $pdo->beginTransaction();
+
+        // Удаляем связи с темами
+        $stmt = $pdo->prepare("DELETE FROM lesson_topics WHERE lesson_id = ?");
+        $stmt->execute([$lessonId]);
+
+        // Удаляем связи с ресурсами
+        $stmt = $pdo->prepare("DELETE FROM lesson_resources WHERE lesson_id = ?");
+        $stmt->execute([$lessonId]);
+
+        // Удаляем занятие
+        $stmt = $pdo->prepare("
+            DELETE l FROM lessons l
+            JOIN diaries d ON l.diary_id = d.id
+            WHERE l.id = ? AND d.user_id = ?
+        ");
+        $stmt->execute([$lessonId, $userId]);
+
+        $pdo->commit();
+        header('Location: lessons.php?diary_id=' . $diaryId . '&message=deleted');
+        exit();
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        $error = 'Ошибка при удалении: ' . $e->getMessage();
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -403,45 +544,54 @@ if ($publicView) {
         body {
             background: #f8f9fa;
         }
+
         .lesson-card {
             background: white;
             border-radius: 15px;
             padding: 20px;
             margin-bottom: 15px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             transition: all 0.3s ease;
             border-left: 4px solid;
             cursor: pointer;
         }
+
         .lesson-card:hover {
             transform: translateX(5px);
-            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
         }
+
         .lesson-card.completed {
             border-left-color: #28a745;
             background: #f8fff9;
         }
+
         .lesson-card.cancelled {
             border-left-color: #dc3545;
             background: #fff8f8;
             opacity: 0.8;
         }
+
         .lesson-card.planned {
             border-left-color: #ffc107;
         }
+
         .lesson-date {
             font-size: 1.1em;
             font-weight: 600;
             color: #333;
         }
+
         .lesson-time {
             color: #667eea;
             font-weight: 500;
         }
+
         .lesson-topics {
             margin-top: 10px;
             color: #666;
         }
+
         .topic-badge {
             background: #e9ecef;
             border-radius: 15px;
@@ -451,6 +601,7 @@ if ($publicView) {
             margin-right: 5px;
             margin-bottom: 5px;
         }
+
         .lesson-meta {
             display: flex;
             gap: 15px;
@@ -458,20 +609,24 @@ if ($publicView) {
             font-size: 0.9em;
             color: #666;
         }
+
         .filter-panel {
             background: white;
             border-radius: 15px;
             padding: 20px;
             margin-bottom: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
+
         .btn-primary {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border: none;
         }
+
         .btn-primary:hover {
             background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
         }
+
         .month-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -479,13 +634,15 @@ if ($publicView) {
             border-radius: 10px;
             margin: 20px 0 15px;
         }
+
         .form-section {
             background: white;
             border-radius: 15px;
             padding: 20px;
             margin-bottom: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
+
         .section-title {
             font-size: 1.1em;
             font-weight: 600;
@@ -493,6 +650,7 @@ if ($publicView) {
             padding-bottom: 10px;
             border-bottom: 2px solid #f0f0f0;
         }
+
         .topic-selector {
             max-height: 300px;
             overflow-y: auto;
@@ -500,22 +658,26 @@ if ($publicView) {
             border-radius: 8px;
             padding: 10px;
         }
+
         .resource-item {
             background: #f8f9fa;
             border-radius: 8px;
             padding: 10px;
             margin-bottom: 10px;
         }
+
         .grade-select {
             width: 80px;
             display: inline-block;
         }
+
         .quick-actions {
             position: fixed;
             bottom: 20px;
             right: 20px;
             z-index: 1000;
         }
+
         .quick-actions .btn {
             width: 50px;
             height: 50px;
@@ -524,9 +686,10 @@ if ($publicView) {
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
             margin-bottom: 10px;
         }
+
         .stats-card {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -534,6 +697,7 @@ if ($publicView) {
             padding: 20px;
             margin-bottom: 20px;
         }
+
         .homework-search {
             max-height: 300px;
             overflow-y: auto;
@@ -541,190 +705,238 @@ if ($publicView) {
             border-radius: 8px;
             padding: 10px;
         }
+
         .homework-item {
             padding: 8px;
             border-bottom: 1px solid #f0f0f0;
             cursor: pointer;
         }
+
         .homework-item:hover {
             background: #f8f9fa;
         }
+
         .homework-item:last-child {
             border-bottom: none;
         }
+
         .public-view {
             max-width: 800px;
             margin: 40px auto;
             padding: 20px;
         }
+
         .public-lesson {
             background: white;
             border-radius: 20px;
             padding: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         }
 
         /* Добавьте в секцию <style> */
-.resource-item-check {
-    padding: 10px;
-    border: 1px solid #e9ecef;
-    border-radius: 8px;
-    margin-bottom: 8px;
-    transition: all 0.2s;
-}
-.resource-item-check:hover {
-    background-color: #f8f9fa;
-    border-color: #dee2e6;
-}
-.resource-item-check .badge {
-    font-size: 0.75rem;
-    padding: 3px 8px;
-}
-#activeFilters .badge {
-    font-size: 0.75rem;
-    padding: 3px 8px;
-}
+        .resource-item-check {
+            padding: 10px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            transition: all 0.2s;
+        }
 
-/* Стили для бейджей оценок */
-.grade-badge {
-    display: inline-block;
-    padding: 3px 8px;
-    border-radius: 12px;
-    font-size: 0.8em;
-    font-weight: 500;
-    margin-right: 5px;
-    margin-bottom: 5px;
-}
+        .resource-item-check:hover {
+            background-color: #f8f9fa;
+            border-color: #dee2e6;
+        }
 
-.grade-badge i {
-    margin-right: 3px;
-}
+        .resource-item-check .badge {
+            font-size: 0.75rem;
+            padding: 3px 8px;
+        }
 
-.grade-badge.grade-5 {
-    background: #28a745;
-    color: white;
-}
+        #activeFilters .badge {
+            font-size: 0.75rem;
+            padding: 3px 8px;
+        }
 
-.grade-badge.grade-4 {
-    background: #17a2b8;
-    color: white;
-}
+        /* Стили для бейджей оценок */
+        .grade-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 500;
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
 
-.grade-badge.grade-3 {
-    background: #ffc107;
-    color: #333;
-}
+        .grade-badge i {
+            margin-right: 3px;
+        }
 
-.grade-badge.grade-2 {
-    background: #fd7e14;
-    color: white;
-}
+        .grade-badge.grade-5 {
+            background: #28a745;
+            color: white;
+        }
 
-.grade-badge.grade-1 {
-    background: #dc3545;
-    color: white;
-}
+        .grade-badge.grade-4 {
+            background: #17a2b8;
+            color: white;
+        }
 
-.grade-badge.grade-0 {
-    background: #6c757d;
-    color: white;
-}
+        .grade-badge.grade-3 {
+            background: #ffc107;
+            color: #333;
+        }
 
-/* Стили для предпросмотра комментариев */
-.comment-preview, .homework-preview {
-    background: #f8f9fa;
-    border-radius: 6px;
-    padding: 4px 8px;
-    margin-top: 2px;
-    border-left: 2px solid #667eea;
-    color: #495057;
-}
+        .grade-badge.grade-2 {
+            background: #fd7e14;
+            color: white;
+        }
 
-/* Стили для секций карточки */
-.lesson-grades, .lesson-statuses {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-}
+        .grade-badge.grade-1 {
+            background: #dc3545;
+            color: white;
+        }
 
-.lesson-comment, .lesson-homework, .homework-comment {
-    margin-bottom: 8px;
-}
+        .grade-badge.grade-0 {
+            background: #6c757d;
+            color: white;
+        }
 
-/* Адаптивность для мобильных */
-@media (max-width: 768px) {
-    .lesson-card .row > div {
-        margin-bottom: 10px;
-    }
-    
-    .lesson-grades, .lesson-statuses {
-        justify-content: flex-start;
-    }
-}
+        /* Стили для предпросмотра комментариев */
+        .comment-preview,
+        .homework-preview {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 4px 8px;
+            margin-top: 2px;
+            border-left: 2px solid #667eea;
+            color: #495057;
+        }
 
-/* Улучшенные стили для карточки */
-.lesson-card {
-    background: white;
-    border-radius: 15px;
-    padding: 20px;
-    margin-bottom: 15px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    transition: all 0.3s ease;
-    border-left: 4px solid;
-    cursor: pointer;
-}
+        /* Стили для секций карточки */
+        .lesson-grades,
+        .lesson-statuses {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
 
-.lesson-card:hover {
-    transform: translateX(5px);
-    box-shadow: 0 5px 20px rgba(0,0,0,0.15);
-}
+        .lesson-comment,
+        .lesson-homework,
+        .homework-comment {
+            margin-bottom: 8px;
+        }
 
-.lesson-card.completed {
-    border-left-color: #28a745;
-    background: #f8fff9;
-}
+        /* Адаптивность для мобильных */
+        @media (max-width: 768px) {
+            .lesson-card .row>div {
+                margin-bottom: 10px;
+            }
 
-.lesson-card.cancelled {
-    border-left-color: #dc3545;
-    background: #fff8f8;
-    opacity: 0.8;
-}
+            .lesson-grades,
+            .lesson-statuses {
+                justify-content: flex-start;
+            }
+        }
 
-.lesson-card.planned {
-    border-left-color: #ffc107;
-}
+        /* Улучшенные стили для карточки */
+        .lesson-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            border-left: 4px solid;
+            cursor: pointer;
+        }
 
-.lesson-date {
-    font-size: 1.1em;
-    font-weight: 600;
-    color: #333;
-}
+        .lesson-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+        }
 
-.lesson-time {
-    color: #667eea;
-    font-weight: 500;
-}
+        .lesson-card.completed {
+            border-left-color: #28a745;
+            background: #f8fff9;
+        }
 
-.topic-badge {
-    background: #e9ecef;
-    border-radius: 15px;
-    padding: 2px 10px;
-    font-size: 0.8em;
-    display: inline-block;
-    margin-right: 5px;
-    margin-bottom: 5px;
-}
+        .lesson-card.cancelled {
+            border-left-color: #dc3545;
+            background: #fff8f8;
+            opacity: 0.8;
+        }
+
+        .lesson-card.planned {
+            border-left-color: #ffc107;
+        }
+
+        .lesson-date {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .lesson-time {
+            color: #667eea;
+            font-weight: 500;
+        }
+
+        .topic-badge {
+            background: #e9ecef;
+            border-radius: 15px;
+            padding: 2px 10px;
+            font-size: 0.8em;
+            display: inline-block;
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
+
+        /* Стили для кнопок действий на карточке */
+        .lesson-actions {
+            border-top: 1px solid #f0f0f0;
+            padding-top: 10px;
+            margin-top: 10px;
+        }
+
+        .lesson-actions .btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            border-radius: 6px;
+        }
+
+        .lesson-actions .btn i {
+            font-size: 0.9rem;
+        }
+
+        .lesson-actions .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Анимация для кнопок */
+        .lesson-actions .btn {
+            transition: all 0.2s ease;
+        }
+
+        /* Для мобильных устройств */
+        @media (max-width: 768px) {
+            .lesson-actions {
+                justify-content: flex-start !important;
+            }
+        }
     </style>
 </head>
+
 <body>
     <?php if (!$publicView): ?>
         <?php include 'menu.php'; ?>
     <?php endif; ?>
-    
+
     <div class="container-fluid py-4">
         <?php if (isset($_GET['message'])): ?>
             <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <?php 
+                <?php
                 $messages = [
                     'saved' => 'Занятие успешно сохранено',
                     'deleted' => 'Занятие удалено',
@@ -736,15 +948,15 @@ if ($publicView) {
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         <?php endif; ?>
-        
+
         <?php if ($message): ?>
             <div class="alert alert-success"><?php echo htmlspecialchars($message); ?></div>
         <?php endif; ?>
-        
+
         <?php if ($error): ?>
             <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
-        
+
         <?php if ($publicView && isset($publicLesson)): ?>
             <!-- Публичный просмотр занятия -->
             <div class="public-view">
@@ -754,16 +966,18 @@ if ($publicView) {
                         <h2 class="mt-3">Занятие по расписанию</h2>
                         <p class="text-muted">Дневник: <?php echo htmlspecialchars($publicLesson['diary_name']); ?></p>
                     </div>
-                    
+
                     <div class="row">
                         <div class="col-md-6">
-                            <p><strong>Ученик:</strong> 
+                            <p><strong>Ученик:</strong>
                                 <?php echo htmlspecialchars($publicLesson['last_name'] . ' ' . $publicLesson['first_name'] . ' ' . ($publicLesson['middle_name'] ?? '')); ?>
                             </p>
-                            <p><strong>Дата:</strong> <?php echo date('d.m.Y', strtotime($publicLesson['lesson_date'])); ?></p>
-                            <p><strong>Время:</strong> <?php echo date('H:i', strtotime($publicLesson['start_time'])); ?></p>
-                            <p><strong>Длительность:</strong> 
-                                <?php 
+                            <p><strong>Дата:</strong> <?php echo date('d.m.Y', strtotime($publicLesson['lesson_date'])); ?>
+                            </p>
+                            <p><strong>Время:</strong> <?php echo date('H:i', strtotime($publicLesson['start_time'])); ?>
+                            </p>
+                            <p><strong>Длительность:</strong>
+                                <?php
                                 $hours = floor($publicLesson['duration'] / 60);
                                 $minutes = $publicLesson['duration'] % 60;
                                 echo ($hours > 0 ? $hours . ' ч ' : '') . ($minutes > 0 ? $minutes . ' мин' : '');
@@ -771,7 +985,7 @@ if ($publicView) {
                             </p>
                         </div>
                         <div class="col-md-6">
-                            <p><strong>Статус:</strong> 
+                            <p><strong>Статус:</strong>
                                 <?php if ($publicLesson['is_completed']): ?>
                                     <span class="badge bg-success">Проведено</span>
                                 <?php elseif ($publicLesson['is_cancelled']): ?>
@@ -788,7 +1002,7 @@ if ($publicView) {
                             <?php endif; ?>
                         </div>
                     </div>
-                    
+
                     <?php if (!empty($publicTopics)): ?>
                         <div class="mt-3">
                             <strong>Темы занятия:</strong>
@@ -799,28 +1013,28 @@ if ($publicView) {
                             </div>
                         </div>
                     <?php endif; ?>
-                    
+
                     <?php if (!empty($publicLesson['topics_manual'])): ?>
                         <div class="mt-3">
                             <strong>Темы (вручную):</strong>
                             <p><?php echo nl2br(htmlspecialchars($publicLesson['topics_manual'])); ?></p>
                         </div>
                     <?php endif; ?>
-                    
+
                     <?php if (!empty($publicLesson['homework_manual'])): ?>
                         <div class="mt-3">
                             <strong>Домашнее задание:</strong>
                             <p><?php echo nl2br(htmlspecialchars($publicLesson['homework_manual'])); ?></p>
                         </div>
                     <?php endif; ?>
-                    
+
                     <?php if (!empty($publicLesson['comment'])): ?>
                         <div class="mt-3">
                             <strong>Комментарий:</strong>
                             <p><?php echo nl2br(htmlspecialchars($publicLesson['comment'])); ?></p>
                         </div>
                     <?php endif; ?>
-                    
+
                     <?php if (!empty($publicLesson['link_url'])): ?>
                         <div class="mt-3">
                             <strong>Ссылка:</strong>
@@ -834,14 +1048,14 @@ if ($publicView) {
                             <?php endif; ?>
                         </div>
                     <?php endif; ?>
-                    
+
                     <div class="alert alert-info mt-4">
                         <i class="bi bi-info-circle"></i>
                         Это публичная ссылка на занятие. Вы можете поделиться ею с учеником.
                     </div>
                 </div>
             </div>
-            
+
         <?php elseif ($action === 'edit' || $lessonId): ?>
             <!-- Форма редактирования занятия -->
             <div class="row">
@@ -850,7 +1064,8 @@ if ($publicView) {
                         <h2>
                             <i class="bi bi-calendar-plus"></i>
                             <?php echo $lessonId ? 'Редактирование занятия' : 'Новое занятие'; ?>
-                            <small class="text-muted"><?php echo htmlspecialchars($diary['last_name'] . ' ' . $diary['first_name']); ?></small>
+                            <small
+                                class="text-muted"><?php echo htmlspecialchars($diary['last_name'] . ' ' . $diary['first_name']); ?></small>
                         </h2>
                         <div>
                             <?php if ($lessonId && $editLesson): ?>
@@ -858,14 +1073,14 @@ if ($publicView) {
                                     <button class="btn btn-sm btn-outline-info me-2" onclick="copyLessonLink()">
                                         <i class="bi bi-link"></i> Копировать ссылку
                                     </button>
-                                    <a href="?remove_link=1&id=<?php echo $lessonId; ?>&diary_id=<?php echo $diaryId; ?>" 
-                                       class="btn btn-sm btn-outline-warning me-2"
-                                       onclick="return confirm('Удалить публичную ссылку?')">
+                                    <a href="?remove_link=1&id=<?php echo $lessonId; ?>&diary_id=<?php echo $diaryId; ?>"
+                                        class="btn btn-sm btn-outline-warning me-2"
+                                        onclick="return confirm('Удалить публичную ссылку?')">
                                         <i class="bi bi-link-45deg"></i> Удалить ссылку
                                     </a>
                                 <?php else: ?>
-                                    <a href="?generate_link=1&id=<?php echo $lessonId; ?>&diary_id=<?php echo $diaryId; ?>" 
-                                       class="btn btn-sm btn-outline-success me-2">
+                                    <a href="?generate_link=1&id=<?php echo $lessonId; ?>&diary_id=<?php echo $diaryId; ?>"
+                                        class="btn btn-sm btn-outline-success me-2">
                                         <i class="bi bi-link-45deg"></i> Создать ссылку
                                     </a>
                                 <?php endif; ?>
@@ -877,120 +1092,121 @@ if ($publicView) {
                     </div>
                 </div>
             </div>
-            
+
             <form method="POST" action="" id="lessonForm">
                 <div class="row">
                     <div class="col-md-8">
                         <!-- Основная информация -->
                         <div class="form-section">
                             <h5 class="section-title">Основная информация</h5>
-                            
+
                             <div class="row">
                                 <div class="col-md-4 mb-3">
                                     <label class="form-label">Дата занятия *</label>
-                                    <input type="date" name="lesson_date" class="form-control" 
-                                           value="<?php echo $editLesson ? $editLesson['lesson_date'] : date('Y-m-d'); ?>" required>
+                                    <input type="date" name="lesson_date" class="form-control"
+                                        value="<?php echo $editLesson ? $editLesson['lesson_date'] : date('Y-m-d'); ?>"
+                                        required>
                                 </div>
                                 <div class="col-md-4 mb-3">
                                     <label class="form-label">Время начала</label>
-                                    <input type="time" name="start_time" class="form-control" 
-                                           value="<?php echo $editLesson ? date('H:i', strtotime($editLesson['start_time'])) : '12:00'; ?>">
+                                    <input type="time" name="start_time" class="form-control"
+                                        value="<?php echo $editLesson ? date('H:i', strtotime($editLesson['start_time'])) : '12:00'; ?>">
                                 </div>
                                 <div class="col-md-4 mb-3">
                                     <label class="form-label">Длительность (мин)</label>
-                                    <input type="number" name="duration" class="form-control" 
-                                           value="<?php echo $editLesson ? $editLesson['duration'] : ($diary['lesson_duration'] ?? 60); ?>"
-                                           step="15" min="15">
+                                    <input type="number" name="duration" class="form-control"
+                                        value="<?php echo $editLesson ? $editLesson['duration'] : ($diary['lesson_duration'] ?? 60); ?>"
+                                        step="15" min="15">
                                 </div>
                             </div>
-                            
+
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Стоимость (₽)</label>
-                                    <input type="number" name="cost" class="form-control" 
-                                           value="<?php echo $editLesson ? $editLesson['cost'] : ($diary['lesson_cost'] ?? ''); ?>"
-                                           step="100" min="0">
+                                    <input type="number" name="cost" class="form-control"
+                                        value="<?php echo $editLesson ? $editLesson['cost'] : ($diary['lesson_cost'] ?? ''); ?>"
+                                        step="100" min="0">
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Статусы</label>
                                     <div class="d-flex gap-3">
                                         <div class="form-check">
-                                            <input type="checkbox" name="is_completed" class="form-check-input" id="isCompleted"
-                                                   <?php echo ($editLesson && $editLesson['is_completed']) ? 'checked' : ''; ?>>
+                                            <input type="checkbox" name="is_completed" class="form-check-input"
+                                                id="isCompleted" <?php echo ($editLesson && $editLesson['is_completed']) ? 'checked' : ''; ?>>
                                             <label class="form-check-label" for="isCompleted">Проведено</label>
                                         </div>
                                         <div class="form-check">
-                                            <input type="checkbox" name="is_cancelled" class="form-check-input" id="isCancelled"
-                                                   <?php echo ($editLesson && $editLesson['is_cancelled']) ? 'checked' : ''; ?>>
+                                            <input type="checkbox" name="is_cancelled" class="form-check-input"
+                                                id="isCancelled" <?php echo ($editLesson && $editLesson['is_cancelled']) ? 'checked' : ''; ?>>
                                             <label class="form-check-label" for="isCancelled">Отменено</label>
                                         </div>
                                         <div class="form-check">
-                                            <input type="checkbox" name="is_paid" class="form-check-input" id="isPaid"
-                                                   <?php echo ($editLesson && $editLesson['is_paid']) ? 'checked' : ''; ?>>
+                                            <input type="checkbox" name="is_paid" class="form-check-input" id="isPaid" <?php echo ($editLesson && $editLesson['is_paid']) ? 'checked' : ''; ?>>
                                             <label class="form-check-label" for="isPaid">Оплачено</label>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        
+
                         <!-- Темы занятия -->
                         <div class="form-section">
                             <h5 class="section-title">Темы занятия</h5>
-                            
-<!-- В разделе "Темы занятия" замените кнопку выбора тем: -->
-<div class="mb-3">
-    <label class="form-label">Выбрать из банка тем</label>
-    <button type="button" class="btn btn-sm btn-outline-primary mb-2" onclick="openTopicsModal()">
-        <i class="bi bi-plus-circle"></i> Выбрать темы
-    </button>
-    
-    <div id="selected-topics" class="mt-2">
-        <?php if (!empty($selectedTopicIds)): ?>
-            <?php foreach ($allTopics as $topic): ?>
-                <?php if (in_array($topic['id'], $selectedTopicIds)): ?>
-                    <span class="topic-badge">
-                        <?php echo htmlspecialchars($topic['name']); ?>
-                        <input type="hidden" name="topics[]" value="<?php echo $topic['id']; ?>">
-                    </span>
-                <?php endif; ?>
-            <?php endforeach; ?>
-        <?php endif; ?>
-    </div>
-</div>
-                            
+
+                            <!-- В разделе "Темы занятия" замените кнопку выбора тем: -->
+                            <div class="mb-3">
+                                <label class="form-label">Выбрать из банка тем</label>
+                                <button type="button" class="btn btn-sm btn-outline-primary mb-2"
+                                    onclick="openTopicsModal()">
+                                    <i class="bi bi-plus-circle"></i> Выбрать темы
+                                </button>
+
+                                <div id="selected-topics" class="mt-2">
+                                    <?php if (!empty($selectedTopicIds)): ?>
+                                        <?php foreach ($allTopics as $topic): ?>
+                                            <?php if (in_array($topic['id'], $selectedTopicIds)): ?>
+                                                <span class="topic-badge">
+                                                    <?php echo htmlspecialchars($topic['name']); ?>
+                                                    <input type="hidden" name="topics[]" value="<?php echo $topic['id']; ?>">
+                                                </span>
+                                            <?php endif; ?>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+
                             <div class="mb-3">
                                 <label class="form-label">Темы (ввести вручную)</label>
-                                <textarea name="topics_manual" class="form-control" rows="2" 
-                                          placeholder="Можно ввести темы вручную"><?php echo $editLesson ? htmlspecialchars($editLesson['topics_manual'] ?? '') : ''; ?></textarea>
+                                <textarea name="topics_manual" class="form-control" rows="2"
+                                    placeholder="Можно ввести темы вручную"><?php echo $editLesson ? htmlspecialchars($editLesson['topics_manual'] ?? '') : ''; ?></textarea>
                             </div>
                         </div>
-                        
+
                         <!-- Домашнее задание -->
                         <div class="form-section">
                             <h5 class="section-title">Домашнее задание</h5>
-                            
+
                             <div class="mb-3">
                                 <label class="form-label">Поиск из уже заданных</label>
-                                <button type="button" class="btn btn-sm btn-outline-primary mb-2" data-bs-toggle="modal" data-bs-target="#homeworkModal">
+                                <button type="button" class="btn btn-sm btn-outline-primary mb-2" data-bs-toggle="modal"
+                                    data-bs-target="#homeworkModal">
                                     <i class="bi bi-search"></i> Найти ДЗ
                                 </button>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label class="form-label">Домашнее задание</label>
-                                <textarea name="homework_manual" class="form-control" rows="3" 
-                                          placeholder="Введите домашнее задание"><?php echo $editLesson ? htmlspecialchars($editLesson['homework_manual'] ?? '') : ''; ?></textarea>
+                                <textarea name="homework_manual" class="form-control" rows="3"
+                                    placeholder="Введите домашнее задание"><?php echo $editLesson ? htmlspecialchars($editLesson['homework_manual'] ?? '') : ''; ?></textarea>
                             </div>
-                            
+
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Оценка за ДЗ (0-5)</label>
                                     <select name="grade_homework" class="form-select grade-select">
                                         <option value="">—</option>
                                         <?php for ($i = 0; $i <= 5; $i++): ?>
-                                            <option value="<?php echo $i; ?>" 
-                                                <?php echo ($editLesson && $editLesson['grade_homework'] == $i) ? 'selected' : ''; ?>>
+                                            <option value="<?php echo $i; ?>" <?php echo ($editLesson && $editLesson['grade_homework'] == $i) ? 'selected' : ''; ?>>
                                                 <?php echo $i; ?>
                                             </option>
                                         <?php endfor; ?>
@@ -998,22 +1214,23 @@ if ($publicView) {
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Комментарий к ДЗ</label>
-                                    <input type="text" name="homework_comment" class="form-control" 
-                                           value="<?php echo $editLesson ? htmlspecialchars($editLesson['homework_comment'] ?? '') : ''; ?>">
+                                    <input type="text" name="homework_comment" class="form-control"
+                                        value="<?php echo $editLesson ? htmlspecialchars($editLesson['homework_comment'] ?? '') : ''; ?>">
                                 </div>
                             </div>
                         </div>
-                        
+
                         <!-- Ресурсы -->
                         <div class="form-section">
                             <h5 class="section-title">Ресурсы</h5>
-                            
+
                             <div class="mb-3">
                                 <label class="form-label">Выбрать из банка ресурсов</label>
-                                <button type="button" class="btn btn-sm btn-outline-primary mb-2" data-bs-toggle="modal" data-bs-target="#resourcesModal">
+                                <button type="button" class="btn btn-sm btn-outline-primary mb-2" data-bs-toggle="modal"
+                                    data-bs-target="#resourcesModal">
                                     <i class="bi bi-plus-circle"></i> Добавить ресурсы
                                 </button>
-                                
+
                                 <div id="selected-resources" class="mt-2">
                                     <?php if (!empty($selectedResources)): ?>
                                         <?php foreach ($allResources as $resource): ?>
@@ -1023,17 +1240,18 @@ if ($publicView) {
                                                         <div>
                                                             <strong><?php echo htmlspecialchars($resource['description'] ?: $resource['url']); ?></strong>
                                                             <br>
-                                                            <small class="text-muted"><?php echo htmlspecialchars($resource['url']); ?></small>
+                                                            <small
+                                                                class="text-muted"><?php echo htmlspecialchars($resource['url']); ?></small>
                                                         </div>
-                                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeResource(<?php echo $resource['id']; ?>)">
+                                                        <button type="button" class="btn btn-sm btn-outline-danger"
+                                                            onclick="removeResource(<?php echo $resource['id']; ?>)">
                                                             <i class="bi bi-x"></i>
                                                         </button>
                                                     </div>
                                                     <div class="mt-2">
-                                                        <input type="text" name="resource_comments[<?php echo $resource['id']; ?>]" 
-                                                               class="form-control form-control-sm" 
-                                                               placeholder="Комментарий к ресурсу"
-                                                               value="<?php echo htmlspecialchars($selectedResources[$resource['id']]); ?>">
+                                                        <input type="text" name="resource_comments[<?php echo $resource['id']; ?>]"
+                                                            class="form-control form-control-sm" placeholder="Комментарий к ресурсу"
+                                                            value="<?php echo htmlspecialchars($selectedResources[$resource['id']]); ?>">
                                                         <input type="hidden" name="resources[]" value="<?php echo $resource['id']; ?>">
                                                     </div>
                                                 </div>
@@ -1042,39 +1260,39 @@ if ($publicView) {
                                     <?php endif; ?>
                                 </div>
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label class="form-label">Ссылка на ресурс</label>
-                                <input type="url" name="link_url" class="form-control" 
-                                       value="<?php echo $editLesson ? htmlspecialchars($editLesson['link_url'] ?? '') : ''; ?>"
-                                       placeholder="https://...">
+                                <input type="url" name="link_url" class="form-control"
+                                    value="<?php echo $editLesson ? htmlspecialchars($editLesson['link_url'] ?? '') : ''; ?>"
+                                    placeholder="https://...">
                             </div>
-                            
+
                             <div class="mb-3">
                                 <label class="form-label">Комментарий к ссылке</label>
-                                <input type="text" name="link_comment" class="form-control" 
-                                       value="<?php echo $editLesson ? htmlspecialchars($editLesson['link_comment'] ?? '') : ''; ?>"
-                                       placeholder="Описание ссылки">
+                                <input type="text" name="link_comment" class="form-control"
+                                    value="<?php echo $editLesson ? htmlspecialchars($editLesson['link_comment'] ?? '') : ''; ?>"
+                                    placeholder="Описание ссылки">
                             </div>
                         </div>
-                        
+
                         <!-- Комментарий и оценки -->
                         <div class="form-section">
                             <h5 class="section-title">Комментарий и оценки</h5>
-                            
+
                             <div class="mb-3">
                                 <label class="form-label">Комментарий к занятию</label>
-                                <textarea name="comment" class="form-control" rows="3"><?php echo $editLesson ? htmlspecialchars($editLesson['comment'] ?? '') : ''; ?></textarea>
+                                <textarea name="comment" class="form-control"
+                                    rows="3"><?php echo $editLesson ? htmlspecialchars($editLesson['comment'] ?? '') : ''; ?></textarea>
                             </div>
-                            
+
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Оценка за занятие (0-5)</label>
                                     <select name="grade_lesson" class="form-select grade-select">
                                         <option value="">—</option>
                                         <?php for ($i = 0; $i <= 5; $i++): ?>
-                                            <option value="<?php echo $i; ?>" 
-                                                <?php echo ($editLesson && $editLesson['grade_lesson'] == $i) ? 'selected' : ''; ?>>
+                                            <option value="<?php echo $i; ?>" <?php echo ($editLesson && $editLesson['grade_lesson'] == $i) ? 'selected' : ''; ?>>
                                                 <?php echo $i; ?>
                                             </option>
                                         <?php endfor; ?>
@@ -1082,52 +1300,53 @@ if ($publicView) {
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Комментарий к оценке</label>
-                                    <input type="text" name="grade_comment" class="form-control" 
-                                           value="<?php echo $editLesson ? htmlspecialchars($editLesson['grade_comment'] ?? '') : ''; ?>">
+                                    <input type="text" name="grade_comment" class="form-control"
+                                        value="<?php echo $editLesson ? htmlspecialchars($editLesson['grade_comment'] ?? '') : ''; ?>">
                                 </div>
                             </div>
                         </div>
-                        
+
                         <button type="submit" name="save_lesson" class="btn btn-primary btn-lg mb-4">
                             <i class="bi bi-save"></i> Сохранить занятие
                         </button>
                     </div>
-                    
+
                     <div class="col-md-4">
                         <!-- Информационный блок -->
                         <div class="form-section">
                             <h5 class="section-title">Информация</h5>
-                            
-                            <p><strong>Ученик:</strong> 
+
+                            <p><strong>Ученик:</strong>
                                 <?php echo htmlspecialchars($diary['last_name'] . ' ' . $diary['first_name'] . ' ' . ($diary['middle_name'] ?? '')); ?>
                             </p>
                             <p><strong>Дневник:</strong> <?php echo htmlspecialchars($diary['name']); ?></p>
-                            <p><strong>Стандартная стоимость:</strong> 
+                            <p><strong>Стандартная стоимость:</strong>
                                 <?php echo $diary['lesson_cost'] ? number_format($diary['lesson_cost'], 0, ',', ' ') . ' ₽' : 'Не указана'; ?>
                             </p>
-                            <p><strong>Стандартная длительность:</strong> 
+                            <p><strong>Стандартная длительность:</strong>
                                 <?php echo $diary['lesson_duration'] ? $diary['lesson_duration'] . ' мин' : '60 мин'; ?>
                             </p>
-                            
+
                             <?php if ($lessonId && $editLesson): ?>
                                 <hr>
-                                <p><small class="text-muted">Создано: <?php echo date('d.m.Y H:i', strtotime($editLesson['created_at'])); ?></small></p>
-                                <p><small class="text-muted">Обновлено: <?php echo date('d.m.Y H:i', strtotime($editLesson['updated_at'])); ?></small></p>
+                                <p><small class="text-muted">Создано:
+                                        <?php echo date('d.m.Y H:i', strtotime($editLesson['created_at'])); ?></small></p>
+                                <p><small class="text-muted">Обновлено:
+                                        <?php echo date('d.m.Y H:i', strtotime($editLesson['updated_at'])); ?></small></p>
                             <?php endif; ?>
                         </div>
-                        
+
                         <!-- Быстрые действия -->
                         <div class="form-section">
                             <h5 class="section-title">Быстрые действия</h5>
-                            
+
                             <button type="button" class="btn btn-outline-secondary w-100 mb-2" onclick="clearAllFields()">
                                 <i class="bi bi-eraser"></i> Очистить все поля
                             </button>
-                            
+
                             <?php if ($lessonId): ?>
-                                <a href="?delete=1&id=<?php echo $lessonId; ?>&diary_id=<?php echo $diaryId; ?>" 
-                                   class="btn btn-outline-danger w-100"
-                                   onclick="return confirm('Удалить занятие?')">
+                                <a href="?delete=1&id=<?php echo $lessonId; ?>&diary_id=<?php echo $diaryId; ?>"
+                                    class="btn btn-outline-danger w-100" onclick="return confirm('Удалить занятие?')">
                                     <i class="bi bi-trash"></i> Удалить занятие
                                 </a>
                             <?php endif; ?>
@@ -1135,12 +1354,12 @@ if ($publicView) {
                     </div>
                 </div>
             </form>
-            
+
         <?php else: ?>
             <!-- Список занятий -->
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2>
-                    <i class="bi bi-calendar-check"></i> 
+                    <i class="bi bi-calendar-check"></i>
                     Занятия: <?php echo htmlspecialchars($diary['last_name'] . ' ' . $diary['first_name']); ?>
                     <small class="text-muted"><?php echo htmlspecialchars($diary['name']); ?></small>
                 </h2>
@@ -1153,7 +1372,7 @@ if ($publicView) {
                     </a>
                 </div>
             </div>
-            
+
             <!-- Статистика -->
             <?php
             $totalLessons = count($lessons);
@@ -1161,17 +1380,20 @@ if ($publicView) {
             $cancelledLessons = 0;
             $totalCost = 0;
             $paidCost = 0;
-            
+
             foreach ($lessons as $l) {
-                if ($l['is_completed']) $completedLessons++;
-                if ($l['is_cancelled']) $cancelledLessons++;
+                if ($l['is_completed'])
+                    $completedLessons++;
+                if ($l['is_cancelled'])
+                    $cancelledLessons++;
                 if ($l['cost']) {
                     $totalCost += $l['cost'];
-                    if ($l['is_paid']) $paidCost += $l['cost'];
+                    if ($l['is_paid'])
+                        $paidCost += $l['cost'];
                 }
             }
             ?>
-            
+
             <div class="stats-card mb-4">
                 <div class="row">
                     <div class="col-md-3">
@@ -1200,36 +1422,40 @@ if ($publicView) {
                     </div>
                 </div>
             </div>
-            
+
             <!-- Фильтры -->
             <div class="filter-panel">
                 <form method="GET" action="" class="row g-3">
                     <input type="hidden" name="diary_id" value="<?php echo $diaryId; ?>">
-                    
+
                     <div class="col-md-2">
                         <label class="form-label">Дата</label>
                         <input type="date" name="filter_date" class="form-control" value="<?php echo $filterDate; ?>">
                     </div>
-                    
+
                     <div class="col-md-2">
                         <label class="form-label">Статус</label>
                         <select name="filter_status" class="form-select">
                             <option value="all" <?php echo $filterStatus == 'all' ? 'selected' : ''; ?>>Все</option>
-                            <option value="planned" <?php echo $filterStatus == 'planned' ? 'selected' : ''; ?>>Запланированные</option>
-                            <option value="completed" <?php echo $filterStatus == 'completed' ? 'selected' : ''; ?>>Проведенные</option>
-                            <option value="cancelled" <?php echo $filterStatus == 'cancelled' ? 'selected' : ''; ?>>Отмененные</option>
+                            <option value="planned" <?php echo $filterStatus == 'planned' ? 'selected' : ''; ?>>
+                                Запланированные</option>
+                            <option value="completed" <?php echo $filterStatus == 'completed' ? 'selected' : ''; ?>>
+                                Проведенные</option>
+                            <option value="cancelled" <?php echo $filterStatus == 'cancelled' ? 'selected' : ''; ?>>Отмененные
+                            </option>
                         </select>
                     </div>
-                    
+
                     <div class="col-md-2">
                         <label class="form-label">Оплата</label>
                         <select name="filter_paid" class="form-select">
                             <option value="all" <?php echo $filterPaid == 'all' ? 'selected' : ''; ?>>Все</option>
                             <option value="paid" <?php echo $filterPaid == 'paid' ? 'selected' : ''; ?>>Оплачено</option>
-                            <option value="unpaid" <?php echo $filterPaid == 'unpaid' ? 'selected' : ''; ?>>Не оплачено</option>
+                            <option value="unpaid" <?php echo $filterPaid == 'unpaid' ? 'selected' : ''; ?>>Не оплачено
+                            </option>
                         </select>
                     </div>
-                    
+
                     <div class="col-md-3">
                         <label class="form-label">Тема</label>
                         <select name="filter_topic" class="form-select">
@@ -1241,7 +1467,7 @@ if ($publicView) {
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    
+
                     <div class="col-md-3 d-flex align-items-end">
                         <button type="submit" class="btn btn-primary w-100">
                             <i class="bi bi-search"></i> Применить
@@ -1249,171 +1475,208 @@ if ($publicView) {
                     </div>
                 </form>
             </div>
-            
-            <!-- Список занятий по месяцам -->            
-<?php if (empty($lessons)): ?>
-    <div class="alert alert-info text-center py-5">
-        <i class="bi bi-calendar-x" style="font-size: 3rem;"></i>
-        <h4 class="mt-3">Занятия не найдены</h4>
-        <p>Добавьте первое занятие, нажав кнопку "Добавить занятие"</p>
-    </div>
-<?php else: ?>
-    <?php foreach ($groupedLessons as $month => $monthLessons): ?>
-        <div class="month-header">
-            <h4 class="mb-0"><?php echo date('F Y', strtotime($month . '-01')); ?></h4>
-        </div>
-        
-        <?php foreach ($monthLessons as $lesson): 
-            $statusClass = $lesson['is_completed'] ? 'completed' : ($lesson['is_cancelled'] ? 'cancelled' : 'planned');
-            
-            // Получаем комментарий к ДЗ, если есть
-            $homeworkComment = !empty($lesson['homework_comment']) ? $lesson['homework_comment'] : '';
-            
-            // Получаем оценку за занятие и ДЗ
-            $gradeLesson = isset($lesson['grade_lesson']) && $lesson['grade_lesson'] !== '' ? $lesson['grade_lesson'] : null;
-            $gradeHomework = isset($lesson['grade_homework']) && $lesson['grade_homework'] !== '' ? $lesson['grade_homework'] : null;
-            
-            // Получаем комментарий к занятию
-            $lessonComment = !empty($lesson['comment']) ? $lesson['comment'] : '';
-            
-            // Получаем домашнее задание
-            $homework = !empty($lesson['homework_manual']) ? $lesson['homework_manual'] : '';
-        ?>
-            <div class="lesson-card <?php echo $statusClass; ?>" onclick="window.location.href='?action=edit&id=<?php echo $lesson['id']; ?>&diary_id=<?php echo $diaryId; ?>'">
-                <div class="row">
-                    <div class="col-md-2">
-                        <div class="lesson-date"><?php echo date('d.m.Y', strtotime($lesson['lesson_date'])); ?></div>
-                        <div class="lesson-time"><?php echo date('H:i', strtotime($lesson['start_time'])); ?></div>
-                        <div class="lesson-duration mt-1">
-                            <small class="text-muted">
-                                <i class="bi bi-clock"></i> <?php echo $lesson['duration']; ?> мин
-                            </small>
-                        </div>
+
+            <!-- Список занятий по месяцам -->
+            <!-- Список занятий по месяцам -->
+            <?php if (empty($lessons)): ?>
+                <div class="alert alert-info text-center py-5">
+                    <i class="bi bi-calendar-x" style="font-size: 3rem;"></i>
+                    <h4 class="mt-3">Занятия не найдены</h4>
+                    <p>Добавьте первое занятие, нажав кнопку "Добавить занятие"</p>
+                </div>
+            <?php else: ?>
+                <?php foreach ($groupedLessons as $month => $monthLessons): ?>
+                    <div class="month-header">
+                        <h4 class="mb-0">
+                            <?php echo date('F Y', strtotime($month . '-01')); ?>
+                        </h4>
                     </div>
-                    
-                    <div class="col-md-3">
-                        <!-- Оценки -->
-                        <div class="lesson-grades mb-2">
-                            <?php if ($gradeLesson !== null): ?>
-                                <span class="grade-badge grade-<?php echo $gradeLesson; ?>" title="Оценка за занятие">
-                                    <i class="bi bi-star-fill"></i> <?php echo $gradeLesson; ?>/5
-                                </span>
-                            <?php endif; ?>
-                            
-                            <?php if ($gradeHomework !== null): ?>
-                                <span class="grade-badge grade-<?php echo $gradeHomework; ?>" title="Оценка за ДЗ">
-                                    <i class="bi bi-journal-check"></i> <?php echo $gradeHomework; ?>/5
-                                </span>
-                            <?php endif; ?>
-                        </div>
-                        
-                        <!-- Статусы -->
-                        <div class="lesson-statuses mb-2">
-                            <?php if ($lesson['is_completed']): ?>
-                                <span class="badge bg-success"><i class="bi bi-check-circle"></i> Проведено</span>
-                            <?php elseif ($lesson['is_cancelled']): ?>
-                                <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Отменено</span>
-                            <?php else: ?>
-                                <span class="badge bg-warning"><i class="bi bi-clock"></i> Запланировано</span>
-                            <?php endif; ?>
-                            
-                            <?php if ($lesson['is_paid']): ?>
-                                <span class="badge bg-info"><i class="bi bi-currency-ruble"></i> Оплачено</span>
-                            <?php endif; ?>
-                        </div>
-                        
-                        <!-- Стоимость (теперь внизу карточки) -->
-                        <?php if ($lesson['cost']): ?>
-                            <div class="lesson-cost text-muted small">
-                                <i class="bi bi-currency-ruble"></i> <?php echo number_format($lesson['cost'], 0, ',', ' '); ?> ₽
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                    
-                    <div class="col-md-4">
-                        <!-- Темы занятия -->
-                        <?php if (!empty($lesson['topic_names'])): ?>
-                            <div class="lesson-topics mb-2">
-                                <small class="text-muted"><i class="bi bi-book"></i> Темы:</small>
-                                <div class="mt-1">
-                                    <?php 
-                                    $topics = explode(',', $lesson['topic_names']);
-                                    foreach (array_slice($topics, 0, 2) as $topic):
-                                    ?>
-                                        <span class="topic-badge"><?php echo htmlspecialchars(trim($topic)); ?></span>
-                                    <?php endforeach; ?>
-                                    <?php if (count($topics) > 2): ?>
-                                        <span class="topic-badge">+<?php echo count($topics) - 2; ?></span>
+
+                    <?php foreach ($monthLessons as $lesson):
+                        $statusClass = $lesson['is_completed'] ? 'completed' : ($lesson['is_cancelled'] ? 'cancelled' : 'planned');
+
+                        // Получаем комментарий к ДЗ, если есть
+                        $homeworkComment = !empty($lesson['homework_comment']) ? $lesson['homework_comment'] : '';
+
+                        // Получаем оценку за занятие и ДЗ
+                        $gradeLesson = isset($lesson['grade_lesson']) && $lesson['grade_lesson'] !== '' ? $lesson['grade_lesson'] : null;
+                        $gradeHomework = isset($lesson['grade_homework']) && $lesson['grade_homework'] !== '' ? $lesson['grade_homework'] : null;
+
+                        // Получаем комментарий к занятию
+                        $lessonComment = !empty($lesson['comment']) ? $lesson['comment'] : '';
+
+                        // Получаем домашнее задание
+                        $homework = !empty($lesson['homework_manual']) ? $lesson['homework_manual'] : '';
+                        ?>
+                        <div class="lesson-card <?php echo $statusClass; ?>">
+                            <div class="row">
+                                <div class="col-md-2">
+                                    <div class="lesson-date">
+                                        <?php echo date('d.m.Y', strtotime($lesson['lesson_date'])); ?>
+                                    </div>
+                                    <div class="lesson-time">
+                                        <?php echo date('H:i', strtotime($lesson['start_time'])); ?>
+                                    </div>
+                                    <div class="lesson-duration mt-1">
+                                        <small class="text-muted">
+                                            <i class="bi bi-clock"></i>
+                                            <?php echo $lesson['duration']; ?> мин
+                                        </small>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-3">
+                                    <!-- Оценки -->
+                                    <div class="lesson-grades mb-2">
+                                        <?php if ($gradeLesson !== null): ?>
+                                            <span class="grade-badge grade-<?php echo $gradeLesson; ?>" title="Оценка за занятие">
+                                                <i class="bi bi-star-fill"></i>
+                                                <?php echo $gradeLesson; ?>/5
+                                            </span>
+                                        <?php endif; ?>
+
+                                        <?php if ($gradeHomework !== null): ?>
+                                            <span class="grade-badge grade-<?php echo $gradeHomework; ?>" title="Оценка за ДЗ">
+                                                <i class="bi bi-journal-check"></i>
+                                                <?php echo $gradeHomework; ?>/5
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
+
+                                    <!-- Статусы -->
+                                    <div class="lesson-statuses mb-2">
+                                        <?php if ($lesson['is_completed']): ?>
+                                            <span class="badge bg-success"><i class="bi bi-check-circle"></i> Проведено</span>
+                                        <?php elseif ($lesson['is_cancelled']): ?>
+                                            <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Отменено</span>
+                                        <?php else: ?>
+                                            <span class="badge bg-warning"><i class="bi bi-clock"></i> Запланировано</span>
+                                        <?php endif; ?>
+
+                                        <?php if ($lesson['is_paid']): ?>
+                                            <span class="badge bg-info"><i class="bi bi-currency-ruble"></i> Оплачено</span>
+                                        <?php endif; ?>
+                                    </div>
+
+                                    <!-- Стоимость -->
+                                    <?php if ($lesson['cost']): ?>
+                                        <div class="lesson-cost text-muted small">
+                                            <i class="bi bi-currency-ruble"></i>
+                                            <?php echo number_format($lesson['cost'], 0, ',', ' '); ?> ₽
+                                        </div>
                                     <?php endif; ?>
                                 </div>
-                            </div>
-                        <?php endif; ?>
-                        
-                        <!-- Комментарий к занятию -->
-                        <?php if (!empty($lessonComment)): ?>
-                            <div class="lesson-comment mb-2">
-                                <small class="text-muted"><i class="bi bi-chat"></i> Комментарий:</small>
-                                <div class="comment-preview small">
-                                    <?php echo nl2br(htmlspecialchars(substr($lessonComment, 0, 50) . (strlen($lessonComment) > 50 ? '...' : ''))); ?>
+
+                                <div class="col-md-4">
+                                    <!-- Темы занятия -->
+                                    <?php if (!empty($lesson['topic_names'])): ?>
+                                        <div class="lesson-topics mb-2">
+                                            <small class="text-muted"><i class="bi bi-book"></i> Темы:</small>
+                                            <div class="mt-1">
+                                                <?php
+                                                $topics = explode(',', $lesson['topic_names']);
+                                                foreach (array_slice($topics, 0, 2) as $topic):
+                                                    ?>
+                                                    <span class="topic-badge">
+                                                        <?php echo htmlspecialchars(trim($topic)); ?>
+                                                    </span>
+                                                <?php endforeach; ?>
+                                                <?php if (count($topics) > 2): ?>
+                                                    <span class="topic-badge">+
+                                                        <?php echo count($topics) - 2; ?>
+                                                    </span>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    <?php endif; ?>
+
+                                    <!-- Комментарий к занятию -->
+                                    <?php if (!empty($lessonComment)): ?>
+                                        <div class="lesson-comment mb-2">
+                                            <small class="text-muted"><i class="bi bi-chat"></i> Комментарий:</small>
+                                            <div class="comment-preview small">
+                                                <?php echo nl2br(htmlspecialchars(substr($lessonComment, 0, 50) . (strlen($lessonComment) > 50 ? '...' : ''))); ?>
+                                            </div>
+                                        </div>
+                                    <?php endif; ?>
+
+                                    <!-- Домашнее задание -->
+                                    <?php if (!empty($homework)): ?>
+                                        <div class="lesson-homework mb-2">
+                                            <small class="text-muted"><i class="bi bi-journal-text"></i> ДЗ:</small>
+                                            <div class="homework-preview small">
+                                                <?php echo nl2br(htmlspecialchars(substr($homework, 0, 50) . (strlen($homework) > 50 ? '...' : ''))); ?>
+                                            </div>
+                                        </div>
+                                    <?php endif; ?>
+
+                                    <!-- Комментарий к ДЗ -->
+                                    <?php if (!empty($homeworkComment)): ?>
+                                        <div class="homework-comment">
+                                            <small class="text-muted"><i class="bi bi-chat-dots"></i> Комм. к ДЗ:</small>
+                                            <div class="comment-preview small">
+                                                <?php echo nl2br(htmlspecialchars(substr($homeworkComment, 0, 50) . (strlen($homeworkComment) > 50 ? '...' : ''))); ?>
+                                            </div>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+
+                                <div class="col-md-3">
+                                    <!-- Ресурсы -->
+                                    <?php if ($lesson['resources_count'] > 0): ?>
+                                        <div class="lesson-resources mb-2">
+                                            <small class="text-muted"><i class="bi bi-link"></i> Ресурсы:
+                                                <?php echo $lesson['resources_count']; ?>
+                                            </small>
+                                        </div>
+                                    <?php endif; ?>
+
+                                    <!-- Ссылка на ресурс -->
+                                    <?php if (!empty($lesson['link_url'])): ?>
+                                        <div class="lesson-link mb-2">
+                                            <small class="text-muted"><i class="bi bi-box-arrow-up-right"></i>
+                                                <a href="<?php echo htmlspecialchars($lesson['link_url']); ?>" target="_blank"
+                                                    class="text-decoration-none">
+                                                    <?php echo htmlspecialchars(substr($lesson['link_url'], 0, 20) . '...'); ?>
+                                                </a>
+                                            </small>
+                                        </div>
+                                    <?php endif; ?>
+
+                                    <!-- Мета-информация -->
+                                    <div class="lesson-meta mt-2">
+                                        <small class="text-muted">
+                                            <i class="bi bi-tag"></i> Ресурсов:
+                                            <?php echo $lesson['resources_count'] ?? 0; ?>
+                                        </small>
+                                    </div>
+
+                                    <!-- Кнопки действий -->
+                                    <div class="lesson-actions mt-3 d-flex justify-content-end gap-2" onclick="event.stopPropagation()">
+                                        <a href="?action=edit&id=<?php echo $lesson['id']; ?>&diary_id=<?php echo $diaryId; ?>"
+                                            class="btn btn-sm btn-outline-primary" title="Редактировать занятие">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a href="?copy=1&id=<?php echo $lesson['id']; ?>&diary_id=<?php echo $diaryId; ?>"
+                                            class="btn btn-sm btn-outline-info" title="Создать копию занятия"
+                                            onclick="return confirm('Создать копию этого занятия?')">
+                                            <i class="bi bi-files"></i>
+                                        </a>
+                                        <a href="?delete=1&id=<?php echo $lesson['id']; ?>&diary_id=<?php echo $diaryId; ?>"
+                                            class="btn btn-sm btn-outline-danger" title="Удалить занятие"
+                                            onclick="return confirm('Вы уверены, что хотите удалить это занятие?')">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
-                        <?php endif; ?>
-                        
-                        <!-- Домашнее задание -->
-                        <?php if (!empty($homework)): ?>
-                            <div class="lesson-homework mb-2">
-                                <small class="text-muted"><i class="bi bi-journal-text"></i> ДЗ:</small>
-                                <div class="homework-preview small">
-                                    <?php echo nl2br(htmlspecialchars(substr($homework, 0, 50) . (strlen($homework) > 50 ? '...' : ''))); ?>
-                                </div>
-                            </div>
-                        <?php endif; ?>
-                        
-                        <!-- Комментарий к ДЗ -->
-                        <?php if (!empty($homeworkComment)): ?>
-                            <div class="homework-comment">
-                                <small class="text-muted"><i class="bi bi-chat-dots"></i> Комм. к ДЗ:</small>
-                                <div class="comment-preview small">
-                                    <?php echo nl2br(htmlspecialchars(substr($homeworkComment, 0, 50) . (strlen($homeworkComment) > 50 ? '...' : ''))); ?>
-                                </div>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                    
-                    <div class="col-md-3">
-                        <!-- Ресурсы -->
-                        <?php if ($lesson['resources_count'] > 0): ?>
-                            <div class="lesson-resources mb-2">
-                                <small class="text-muted"><i class="bi bi-link"></i> Ресурсы: <?php echo $lesson['resources_count']; ?></small>
-                            </div>
-                        <?php endif; ?>
-                        
-                        <!-- Ссылка на ресурс -->
-                        <?php if (!empty($lesson['link_url'])): ?>
-                            <div class="lesson-link mb-2">
-                                <small class="text-muted"><i class="bi bi-box-arrow-up-right"></i> 
-                                    <a href="<?php echo htmlspecialchars($lesson['link_url']); ?>" target="_blank" class="text-decoration-none">
-                                        <?php echo htmlspecialchars(substr($lesson['link_url'], 0, 20) . '...'); ?>
-                                    </a>
-                                </small>
-                            </div>
-                        <?php endif; ?>
-                        
-                        <!-- Мета-информация -->
-                        <div class="lesson-meta mt-2">
-                            <small class="text-muted">
-                                <i class="bi bi-tag"></i> Ресурсов: <?php echo $lesson['resources_count'] ?? 0; ?>
-                            </small>
                         </div>
-                    </div>
-                </div>
-            </div>
-        <?php endforeach; ?>
-    <?php endforeach; ?>
-<?php endif; ?>
+                    <?php endforeach; ?>
+                <?php endforeach; ?>
+            <?php endif; ?>
         <?php endif; ?>
     </div>
-    
+
     <!-- Модальное окно выбора тем -->
     <div class="modal fade" id="topicsModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
@@ -1437,21 +1700,22 @@ if ($publicView) {
                         </div>
                         <div class="col-md-6">
                             <h6>Поиск</h6>
-                            <input type="text" class="form-control mb-3" id="topicSearch" placeholder="Поиск по названию...">
+                            <input type="text" class="form-control mb-3" id="topicSearch"
+                                placeholder="Поиск по названию...">
                         </div>
                     </div>
-                    
+
                     <div class="topic-selector" id="topicsList">
                         <?php foreach ($allTopics as $topic): ?>
-                            <div class="form-check topic-item" data-category="<?php echo $topic['category_id']; ?>" data-name="<?php echo strtolower($topic['name']); ?>">
-                                <input type="checkbox" class="form-check-input topic-checkbox" 
-                                       value="<?php echo $topic['id']; ?>" 
-                                       id="topic_<?php echo $topic['id']; ?>"
-                                       <?php echo (in_array($topic['id'], $selectedTopicIds)) ? 'checked' : ''; ?>>
+                            <div class="form-check topic-item" data-category="<?php echo $topic['category_id']; ?>"
+                                data-name="<?php echo strtolower($topic['name']); ?>">
+                                <input type="checkbox" class="form-check-input topic-checkbox"
+                                    value="<?php echo $topic['id']; ?>" id="topic_<?php echo $topic['id']; ?>" <?php echo (in_array($topic['id'], $selectedTopicIds)) ? 'checked' : ''; ?>>
                                 <label class="form-check-label" for="topic_<?php echo $topic['id']; ?>">
                                     <?php echo htmlspecialchars($topic['name']); ?>
                                     <?php if ($topic['category_name']): ?>
-                                        <small class="text-muted">(<?php echo htmlspecialchars($topic['category_name']); ?>)</small>
+                                        <small
+                                            class="text-muted">(<?php echo htmlspecialchars($topic['category_name']); ?>)</small>
                                     <?php endif; ?>
                                 </label>
                             </div>
@@ -1465,176 +1729,181 @@ if ($publicView) {
             </div>
         </div>
     </div>
-    
+
     <!-- Модальное окно выбора ресурсов -->
     <!-- Модальное окно выбора ресурсов -->
-<div class="modal fade" id="resourcesModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Выбор ресурсов</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <!-- Фильтры -->
-                <div class="row mb-3">
-                    <div class="col-md-4">
-                        <label class="form-label">Категория</label>
-                        <select class="form-select" id="resourceCategoryFilter">
-                            <option value="">Все категории</option>
-                            <?php foreach ($resourceCategories as $category): ?>
-                                <option value="<?php echo $category['id']; ?>">
-                                    <?php echo htmlspecialchars($category['name']); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Метка</label>
-                        <select class="form-select" id="resourceLabelFilter">
-                            <option value="">Все метки</option>
-                            <?php foreach ($resourceLabels as $label): ?>
-                                <option value="<?php echo $label['id']; ?>" 
-                                        data-category="<?php echo $label['category_id']; ?>">
-                                    <?php echo htmlspecialchars($label['name']); ?>
-                                    <?php if ($label['category_name']): ?>
-                                        (<?php echo htmlspecialchars($label['category_name']); ?>)
-                                    <?php endif; ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Тип ресурса</label>
-                        <select class="form-select" id="resourceTypeFilter">
-                            <option value="">Все типы</option>
-                            <option value="page">Страница</option>
-                            <option value="document">Документ</option>
-                            <option value="video">Видео</option>
-                            <option value="audio">Аудио</option>
-                            <option value="other">Другое</option>
-                        </select>
-                    </div>
+    <div class="modal fade" id="resourcesModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Выбор ресурсов</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                
-                <div class="row mb-3">
-                    <div class="col-md-8">
-                        <label class="form-label">Поиск по названию</label>
-                        <input type="text" class="form-control" id="resourceSearch" placeholder="Введите текст для поиска...">
-                    </div>
-                    <div class="col-md-4 d-flex align-items-end">
-                        <button type="button" class="btn btn-outline-secondary w-100" onclick="clearResourceFilters()">
-                            <i class="bi bi-eraser"></i> Сбросить фильтры
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Информация о количестве и выбранных фильтрах -->
-                <div class="mb-2 small">
-                    <span id="resourceCount" class="badge bg-primary">0</span> ресурсов найдено
-                    <span id="activeFilters" class="ms-2"></span>
-                </div>
-                
-                <!-- Список ресурсов -->
-                <div class="topic-selector" id="resourcesList">
-                    <?php foreach ($allResourcesWithLabels as $resource): 
-                        // Определяем иконку для типа ресурса
-                        $typeIcon = 'bi-file-earmark';
-                        if ($resource['type'] === 'page') $typeIcon = 'bi-file-earmark-text';
-                        else if ($resource['type'] === 'document') $typeIcon = 'bi-file-earmark-pdf';
-                        else if ($resource['type'] === 'video') $typeIcon = 'bi-camera-reels';
-                        else if ($resource['type'] === 'audio') $typeIcon = 'bi-mic';
-                        
-                        // Получаем ID меток для фильтрации
-                        $labelIds = $resource['label_ids'] ? explode(',', $resource['label_ids']) : [];
-                        $labelNames = $resource['label_names'] ? explode(',', $resource['label_names']) : [];
-                    ?>
-                        <div class="form-check resource-item-check mb-2" 
-                             data-id="<?php echo $resource['id']; ?>"
-                             data-description="<?php echo htmlspecialchars($resource['description'] ?: 'Ресурс'); ?>"
-                             data-url="<?php echo htmlspecialchars($resource['url']); ?>"
-                             data-type="<?php echo $resource['type']; ?>"
-                             data-category="<?php echo $resource['category_id']; ?>"
-                             data-labels="<?php echo implode(',', $labelIds); ?>"
-                             data-search="<?php echo strtolower(htmlspecialchars($resource['description'] ?: $resource['url'])); ?>">
-                            <div class="d-flex align-items-start">
-                                <input type="checkbox" class="form-check-input resource-checkbox me-2" 
-                                       value="<?php echo $resource['id']; ?>" 
-                                       id="resource_<?php echo $resource['id']; ?>">
-                                <label class="form-check-label flex-grow-1" for="resource_<?php echo $resource['id']; ?>">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div class="flex-grow-1">
-                                            <div class="d-flex align-items-center">
-                                                <i class="bi <?php echo $typeIcon; ?> me-2 text-primary"></i>
-                                                <strong><?php echo htmlspecialchars($resource['description'] ?: substr($resource['url'], 0, 50) . '...'); ?></strong>
-                                            </div>
-                                            
-                                            <!-- Метки ресурса -->
-                                            <?php if (!empty($labelNames)): ?>
-                                                <div class="mt-1">
-                                                    <?php foreach ($labelNames as $labelName): ?>
-                                                        <?php if (trim($labelName)): ?>
-                                                            <span class="badge bg-light text-dark me-1"><?php echo htmlspecialchars(trim($labelName)); ?></span>
-                                                        <?php endif; ?>
-                                                    <?php endforeach; ?>
-                                                </div>
-                                            <?php endif; ?>
-                                            
-                                            <!-- Категория и тип -->
-                                            <div class="mt-1">
-                                                <?php 
-                                                // Находим категорию
-                                                $catName = '';
-                                                foreach ($resourceCategories as $cat) {
-                                                    if ($cat['id'] == $resource['category_id']) {
-                                                        $catName = $cat['name'];
-                                                        break;
-                                                    }
-                                                }
-                                                ?>
-                                                <?php if ($catName): ?>
-                                                    <span class="badge" style="background: #e9ecef; color: #333;">
-                                                        <i class="bi bi-folder"></i> <?php echo htmlspecialchars($catName); ?>
-                                                    </span>
-                                                <?php endif; ?>
-                                                
-                                                <span class="badge bg-secondary ms-1">
-                                                    <?php 
-                                                    $typeNames = ['page' => 'Страница', 'document' => 'Документ', 'video' => 'Видео', 'audio' => 'Аудио', 'other' => 'Другое'];
-                                                    echo $typeNames[$resource['type']] ?? 'Другое';
-                                                    ?>
-                                                </span>
-                                            </div>
-                                        </div>
-                                        
-                                        <a href="<?php echo htmlspecialchars($resource['url']); ?>" 
-                                           target="_blank" 
-                                           class="btn btn-sm btn-outline-primary ms-2"
-                                           title="Перейти по ссылке"
-                                           onclick="event.stopPropagation()">
-                                            <i class="bi bi-box-arrow-up-right"></i>
-                                        </a>
-                                    </div>
-                                </label>
-                            </div>
+                <div class="modal-body">
+                    <!-- Фильтры -->
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Категория</label>
+                            <select class="form-select" id="resourceCategoryFilter">
+                                <option value="">Все категории</option>
+                                <?php foreach ($resourceCategories as $category): ?>
+                                    <option value="<?php echo $category['id']; ?>">
+                                        <?php echo htmlspecialchars($category['name']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
-                    <?php endforeach; ?>
+                        <div class="col-md-4">
+                            <label class="form-label">Метка</label>
+                            <select class="form-select" id="resourceLabelFilter">
+                                <option value="">Все метки</option>
+                                <?php foreach ($resourceLabels as $label): ?>
+                                    <option value="<?php echo $label['id']; ?>"
+                                        data-category="<?php echo $label['category_id']; ?>">
+                                        <?php echo htmlspecialchars($label['name']); ?>
+                                        <?php if ($label['category_name']): ?>
+                                            (<?php echo htmlspecialchars($label['category_name']); ?>)
+                                        <?php endif; ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Тип ресурса</label>
+                            <select class="form-select" id="resourceTypeFilter">
+                                <option value="">Все типы</option>
+                                <option value="page">Страница</option>
+                                <option value="document">Документ</option>
+                                <option value="video">Видео</option>
+                                <option value="audio">Аудио</option>
+                                <option value="other">Другое</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label">Поиск по названию</label>
+                            <input type="text" class="form-control" id="resourceSearch"
+                                placeholder="Введите текст для поиска...">
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="button" class="btn btn-outline-secondary w-100"
+                                onclick="clearResourceFilters()">
+                                <i class="bi bi-eraser"></i> Сбросить фильтры
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Информация о количестве и выбранных фильтрах -->
+                    <div class="mb-2 small">
+                        <span id="resourceCount" class="badge bg-primary">0</span> ресурсов найдено
+                        <span id="activeFilters" class="ms-2"></span>
+                    </div>
+
+                    <!-- Список ресурсов -->
+                    <div class="topic-selector" id="resourcesList">
+                        <?php foreach ($allResourcesWithLabels as $resource):
+                            // Определяем иконку для типа ресурса
+                            $typeIcon = 'bi-file-earmark';
+                            if ($resource['type'] === 'page')
+                                $typeIcon = 'bi-file-earmark-text';
+                            else if ($resource['type'] === 'document')
+                                $typeIcon = 'bi-file-earmark-pdf';
+                            else if ($resource['type'] === 'video')
+                                $typeIcon = 'bi-camera-reels';
+                            else if ($resource['type'] === 'audio')
+                                $typeIcon = 'bi-mic';
+
+                            // Получаем ID меток для фильтрации
+                            $labelIds = $resource['label_ids'] ? explode(',', $resource['label_ids']) : [];
+                            $labelNames = $resource['label_names'] ? explode(',', $resource['label_names']) : [];
+                            ?>
+                            <div class="form-check resource-item-check mb-2" data-id="<?php echo $resource['id']; ?>"
+                                data-description="<?php echo htmlspecialchars($resource['description'] ?: 'Ресурс'); ?>"
+                                data-url="<?php echo htmlspecialchars($resource['url']); ?>"
+                                data-type="<?php echo $resource['type']; ?>"
+                                data-category="<?php echo $resource['category_id']; ?>"
+                                data-labels="<?php echo implode(',', $labelIds); ?>"
+                                data-search="<?php echo strtolower(htmlspecialchars($resource['description'] ?: $resource['url'])); ?>">
+                                <div class="d-flex align-items-start">
+                                    <input type="checkbox" class="form-check-input resource-checkbox me-2"
+                                        value="<?php echo $resource['id']; ?>" id="resource_<?php echo $resource['id']; ?>">
+                                    <label class="form-check-label flex-grow-1"
+                                        for="resource_<?php echo $resource['id']; ?>">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="flex-grow-1">
+                                                <div class="d-flex align-items-center">
+                                                    <i class="bi <?php echo $typeIcon; ?> me-2 text-primary"></i>
+                                                    <strong><?php echo htmlspecialchars($resource['description'] ?: substr($resource['url'], 0, 50) . '...'); ?></strong>
+                                                </div>
+
+                                                <!-- Метки ресурса -->
+                                                <?php if (!empty($labelNames)): ?>
+                                                    <div class="mt-1">
+                                                        <?php foreach ($labelNames as $labelName): ?>
+                                                            <?php if (trim($labelName)): ?>
+                                                                <span
+                                                                    class="badge bg-light text-dark me-1"><?php echo htmlspecialchars(trim($labelName)); ?></span>
+                                                            <?php endif; ?>
+                                                        <?php endforeach; ?>
+                                                    </div>
+                                                <?php endif; ?>
+
+                                                <!-- Категория и тип -->
+                                                <div class="mt-1">
+                                                    <?php
+                                                    // Находим категорию
+                                                    $catName = '';
+                                                    foreach ($resourceCategories as $cat) {
+                                                        if ($cat['id'] == $resource['category_id']) {
+                                                            $catName = $cat['name'];
+                                                            break;
+                                                        }
+                                                    }
+                                                    ?>
+                                                    <?php if ($catName): ?>
+                                                        <span class="badge" style="background: #e9ecef; color: #333;">
+                                                            <i class="bi bi-folder"></i>
+                                                            <?php echo htmlspecialchars($catName); ?>
+                                                        </span>
+                                                    <?php endif; ?>
+
+                                                    <span class="badge bg-secondary ms-1">
+                                                        <?php
+                                                        $typeNames = ['page' => 'Страница', 'document' => 'Документ', 'video' => 'Видео', 'audio' => 'Аудио', 'other' => 'Другое'];
+                                                        echo $typeNames[$resource['type']] ?? 'Другое';
+                                                        ?>
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <a href="<?php echo htmlspecialchars($resource['url']); ?>" target="_blank"
+                                                class="btn btn-sm btn-outline-primary ms-2" title="Перейти по ссылке"
+                                                onclick="event.stopPropagation()">
+                                                <i class="bi bi-box-arrow-up-right"></i>
+                                            </a>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <!-- Сообщение, если ничего не найдено -->
+                    <div id="noResourcesMessage" class="text-center py-4 text-muted" style="display: none;">
+                        <i class="bi bi-search" style="font-size: 2rem;"></i>
+                        <p class="mt-2">Ресурсы не найдены</p>
+                    </div>
                 </div>
-                
-                <!-- Сообщение, если ничего не найдено -->
-                <div id="noResourcesMessage" class="text-center py-4 text-muted" style="display: none;">
-                    <i class="bi bi-search" style="font-size: 2rem;"></i>
-                    <p class="mt-2">Ресурсы не найдены</p>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-primary" onclick="applyResources()">Применить</button>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                <button type="button" class="btn btn-primary" onclick="applyResources()">Применить</button>
             </div>
         </div>
     </div>
-</div>
-    
+
     <!-- Модальное окно поиска домашних заданий -->
     <div class="modal fade" id="homeworkModal" tabindex="-1">
         <div class="modal-dialog">
@@ -1645,11 +1914,12 @@ if ($publicView) {
                 </div>
                 <div class="modal-body">
                     <input type="text" class="form-control mb-3" id="homeworkSearch" placeholder="Поиск по тексту...">
-                    
+
                     <div class="homework-search" id="homeworkList">
                         <?php foreach ($allHomework as $homework): ?>
                             <?php if (!empty($homework)): ?>
-                                <div class="homework-item" onclick="selectHomework('<?php echo htmlspecialchars(addslashes($homework)); ?>')">
+                                <div class="homework-item"
+                                    onclick="selectHomework('<?php echo htmlspecialchars(addslashes($homework)); ?>')">
                                     <?php echo htmlspecialchars(substr($homework, 0, 100)) . (strlen($homework) > 100 ? '...' : ''); ?>
                                 </div>
                             <?php endif; ?>
@@ -1659,87 +1929,87 @@ if ($publicView) {
             </div>
         </div>
     </div>
-    
 
-<script>
-// Глобальные переменные для хранения выбранных элементов
-let selectedTopics = <?php echo json_encode($selectedTopicIds); ?>;
-let selectedResourcesData = <?php echo json_encode($selectedResources); ?>;
 
-// Функции для работы с темами
-function openTopicsModal() {
-    const modal = new bootstrap.Modal(document.getElementById('topicsModal'));
-    
-    // Обновляем чекбоксы в соответствии с выбранными темами
-    document.querySelectorAll('#topicsList .topic-checkbox').forEach(cb => {
-        cb.checked = selectedTopics.includes(parseInt(cb.value));
-    });
-    
-    modal.show();
-}
+    <script>
+        // Глобальные переменные для хранения выбранных элементов
+        let selectedTopics = <?php echo json_encode($selectedTopicIds); ?>;
+        let selectedResourcesData = <?php echo json_encode($selectedResources); ?>;
 
-function applyTopics() {
-    selectedTopics = [];
-    document.querySelectorAll('#topicsList .topic-checkbox:checked').forEach(cb => {
-        selectedTopics.push(parseInt(cb.value));
-    });
-    
-    // Обновляем отображение выбранных тем
-    const container = document.getElementById('selected-topics');
-    container.innerHTML = '';
-    
-    selectedTopics.forEach(topicId => {
-        const label = document.querySelector(`label[for="topic_${topicId}"]`).innerText;
-        const span = document.createElement('span');
-        span.className = 'topic-badge';
-        span.innerHTML = `${label} <input type="hidden" name="topics[]" value="${topicId}">`;
-        container.appendChild(span);
-    });
-    
-    bootstrap.Modal.getInstance(document.getElementById('topicsModal')).hide();
-}
+        // Функции для работы с темами
+        function openTopicsModal() {
+            const modal = new bootstrap.Modal(document.getElementById('topicsModal'));
 
-// Функции для работы с ресурсами
-function openResourcesModal() {
-    const modal = new bootstrap.Modal(document.getElementById('resourcesModal'));
-    
-    // Обновляем чекбоксы в соответствии с выбранными ресурсами
-    document.querySelectorAll('#resourcesList .resource-checkbox').forEach(cb => {
-        cb.checked = selectedResourcesData.hasOwnProperty(cb.value);
-    });
-    
-    modal.show();
-}
+            // Обновляем чекбоксы в соответствии с выбранными темами
+            document.querySelectorAll('#topicsList .topic-checkbox').forEach(cb => {
+                cb.checked = selectedTopics.includes(parseInt(cb.value));
+            });
 
-function applyResources() {
-    const selected = [];
-    document.querySelectorAll('#resourcesList .resource-checkbox:checked').forEach(cb => {
-        selected.push(parseInt(cb.value));
-    });
-    
-    // Обновляем контейнер с выбранными ресурсами
-    const container = document.getElementById('selected-resources');
-    container.innerHTML = '';
-    
-    selected.forEach(resourceId => {
-        const resourceDiv = document.querySelector(`#resourcesList .resource-checkbox[value="${resourceId}"]`).closest('.resource-item-check');
-        
-        // Получаем данные из data-атрибутов
-        const description = resourceDiv.dataset.description || 'Ресурс';
-        const url = resourceDiv.dataset.url || '';
-        const type = resourceDiv.dataset.type || 'other';
-        
-        // Иконка в зависимости от типа
-        let icon = 'bi-file-earmark';
-        if (type === 'page') icon = 'bi-file-earmark-text';
-        else if (type === 'document') icon = 'bi-file-earmark-pdf';
-        else if (type === 'video') icon = 'bi-camera-reels';
-        else if (type === 'audio') icon = 'bi-mic';
-        
-        const div = document.createElement('div');
-        div.className = 'resource-item';
-        div.id = `resource-${resourceId}`;
-        div.innerHTML = `
+            modal.show();
+        }
+
+        function applyTopics() {
+            selectedTopics = [];
+            document.querySelectorAll('#topicsList .topic-checkbox:checked').forEach(cb => {
+                selectedTopics.push(parseInt(cb.value));
+            });
+
+            // Обновляем отображение выбранных тем
+            const container = document.getElementById('selected-topics');
+            container.innerHTML = '';
+
+            selectedTopics.forEach(topicId => {
+                const label = document.querySelector(`label[for="topic_${topicId}"]`).innerText;
+                const span = document.createElement('span');
+                span.className = 'topic-badge';
+                span.innerHTML = `${label} <input type="hidden" name="topics[]" value="${topicId}">`;
+                container.appendChild(span);
+            });
+
+            bootstrap.Modal.getInstance(document.getElementById('topicsModal')).hide();
+        }
+
+        // Функции для работы с ресурсами
+        function openResourcesModal() {
+            const modal = new bootstrap.Modal(document.getElementById('resourcesModal'));
+
+            // Обновляем чекбоксы в соответствии с выбранными ресурсами
+            document.querySelectorAll('#resourcesList .resource-checkbox').forEach(cb => {
+                cb.checked = selectedResourcesData.hasOwnProperty(cb.value);
+            });
+
+            modal.show();
+        }
+
+        function applyResources() {
+            const selected = [];
+            document.querySelectorAll('#resourcesList .resource-checkbox:checked').forEach(cb => {
+                selected.push(parseInt(cb.value));
+            });
+
+            // Обновляем контейнер с выбранными ресурсами
+            const container = document.getElementById('selected-resources');
+            container.innerHTML = '';
+
+            selected.forEach(resourceId => {
+                const resourceDiv = document.querySelector(`#resourcesList .resource-checkbox[value="${resourceId}"]`).closest('.resource-item-check');
+
+                // Получаем данные из data-атрибутов
+                const description = resourceDiv.dataset.description || 'Ресурс';
+                const url = resourceDiv.dataset.url || '';
+                const type = resourceDiv.dataset.type || 'other';
+
+                // Иконка в зависимости от типа
+                let icon = 'bi-file-earmark';
+                if (type === 'page') icon = 'bi-file-earmark-text';
+                else if (type === 'document') icon = 'bi-file-earmark-pdf';
+                else if (type === 'video') icon = 'bi-camera-reels';
+                else if (type === 'audio') icon = 'bi-mic';
+
+                const div = document.createElement('div');
+                div.className = 'resource-item';
+                div.id = `resource-${resourceId}`;
+                div.innerHTML = `
             <div class="d-flex justify-content-between align-items-start">
                 <div class="flex-grow-1">
                     <div class="d-flex align-items-center">
@@ -1762,309 +2032,310 @@ function applyResources() {
                 <input type="hidden" name="resources[]" value="${resourceId}">
             </div>
         `;
-        container.appendChild(div);
-        
-        // Обновляем selectedResourcesData
-        if (!selectedResourcesData[resourceId]) {
-            selectedResourcesData[resourceId] = '';
+                container.appendChild(div);
+
+                // Обновляем selectedResourcesData
+                if (!selectedResourcesData[resourceId]) {
+                    selectedResourcesData[resourceId] = '';
+                }
+            });
+
+            // Удаляем ресурсы, которые были сняты
+            Object.keys(selectedResourcesData).forEach(resourceId => {
+                if (!selected.includes(parseInt(resourceId))) {
+                    delete selectedResourcesData[resourceId];
+                }
+            });
+
+            bootstrap.Modal.getInstance(document.getElementById('resourcesModal')).hide();
         }
-    });
-    
-    // Удаляем ресурсы, которые были сняты
-    Object.keys(selectedResourcesData).forEach(resourceId => {
-        if (!selected.includes(parseInt(resourceId))) {
+
+
+        function removeResource(resourceId) {
+            document.getElementById(`resource-${resourceId}`).remove();
             delete selectedResourcesData[resourceId];
+
+            // Снимаем чекбокс в модальном окне
+            const checkbox = document.querySelector(`#resourcesList .resource-checkbox[value="${resourceId}"]`);
+            if (checkbox) {
+                checkbox.checked = false;
+            }
         }
-    });
-    
-    bootstrap.Modal.getInstance(document.getElementById('resourcesModal')).hide();
-}
+
+        // Функции для работы с ДЗ
+        function selectHomework(text) {
+            document.querySelector('textarea[name="homework_manual"]').value = text;
+            bootstrap.Modal.getInstance(document.getElementById('homeworkModal')).hide();
+        }
+
+        // Фильтрация тем
+        document.addEventListener('DOMContentLoaded', function () {
+            const categoryFilter = document.getElementById('topicCategoryFilter');
+            const searchInput = document.getElementById('topicSearch');
+
+            if (categoryFilter) {
+                categoryFilter.addEventListener('change', filterTopics);
+            }
+
+            if (searchInput) {
+                searchInput.addEventListener('input', filterTopics);
+            }
+
+            // Фильтрация ресурсов
+            const resourceSearch = document.getElementById('resourceSearch');
+            if (resourceSearch) {
+                resourceSearch.addEventListener('input', function (e) {
+                    const search = e.target.value.toLowerCase();
+
+                    document.querySelectorAll('#resourcesList .resource-item-check').forEach(item => {
+                        const text = item.innerText.toLowerCase();
+                        item.style.display = text.includes(search) ? 'block' : 'none';
+                    });
+                });
+            }
+
+            // Фильтрация ДЗ
+            const homeworkSearch = document.getElementById('homeworkSearch');
+            if (homeworkSearch) {
+                homeworkSearch.addEventListener('input', function (e) {
+                    const search = e.target.value.toLowerCase();
+
+                    document.querySelectorAll('#homeworkList .homework-item').forEach(item => {
+                        const text = item.innerText.toLowerCase();
+                        item.style.display = text.includes(search) ? 'block' : 'none';
+                    });
+                });
+            }
+        });
+
+        function filterTopics() {
+            const category = document.getElementById('topicCategoryFilter').value;
+            const search = document.getElementById('topicSearch').value.toLowerCase();
+
+            document.querySelectorAll('#topicsList .topic-item').forEach(item => {
+                let show = true;
+                const itemCategory = item.dataset.category;
+                const itemName = item.dataset.name || '';
+
+                if (category && itemCategory != category && !(category === 'null' && !itemCategory)) {
+                    show = false;
+                }
+
+                if (search && !itemName.includes(search)) {
+                    show = false;
+                }
+
+                item.style.display = show ? 'block' : 'none';
+            });
+        }
+
+        // Очистка всех полей
+        function clearAllFields() {
+            if (confirm('Очистить все поля формы?')) {
+                document.getElementById('lessonForm').reset();
+                document.getElementById('selected-topics').innerHTML = '';
+                document.getElementById('selected-resources').innerHTML = '';
+                selectedTopics = [];
+                selectedResourcesData = {};
+            }
+        }
+
+        // Копирование публичной ссылки
+        function copyLessonLink() {
+            const link = "<?php echo $_SERVER['REQUEST_SCHEME'] . '://' . $_SERVER['HTTP_HOST'] . '/lessons.php?public=1&token=' . ($editLesson['public_link'] ?? ''); ?>";
+            navigator.clipboard.writeText(link).then(() => {
+                alert('Ссылка скопирована в буфер обмена');
+            });
+        }
+
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function () {
+            // Исправляем проблему с модальными окнами Bootstrap
+            var modalElements = document.querySelectorAll('.modal');
+            modalElements.forEach(function (modalEl) {
+                new bootstrap.Modal(modalEl);
+            });
+        });
 
 
-function removeResource(resourceId) {
-    document.getElementById(`resource-${resourceId}`).remove();
-    delete selectedResourcesData[resourceId];
-    
-    // Снимаем чекбокс в модальном окне
-    const checkbox = document.querySelector(`#resourcesList .resource-checkbox[value="${resourceId}"]`);
-    if (checkbox) {
-        checkbox.checked = false;
-    }
-}
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                const openModals = document.querySelectorAll('.modal.show');
+                openModals.forEach(modal => {
+                    bootstrap.Modal.getInstance(modal).hide();
+                });
+            }
+        });
 
-// Функции для работы с ДЗ
-function selectHomework(text) {
-    document.querySelector('textarea[name="homework_manual"]').value = text;
-    bootstrap.Modal.getInstance(document.getElementById('homeworkModal')).hide();
-}
+        // Функции для фильтрации ресурсов
+        function filterResources() {
+            const category = document.getElementById('resourceCategoryFilter').value;
+            const label = document.getElementById('resourceLabelFilter').value;
+            const type = document.getElementById('resourceTypeFilter').value;
+            const search = document.getElementById('resourceSearch').value.toLowerCase();
 
-// Фильтрация тем
-document.addEventListener('DOMContentLoaded', function() {
-    const categoryFilter = document.getElementById('topicCategoryFilter');
-    const searchInput = document.getElementById('topicSearch');
-    
-    if (categoryFilter) {
-        categoryFilter.addEventListener('change', filterTopics);
-    }
-    
-    if (searchInput) {
-        searchInput.addEventListener('input', filterTopics);
-    }
-    
-    // Фильтрация ресурсов
-    const resourceSearch = document.getElementById('resourceSearch');
-    if (resourceSearch) {
-        resourceSearch.addEventListener('input', function(e) {
-            const search = e.target.value.toLowerCase();
-            
+            let visibleCount = 0;
+
             document.querySelectorAll('#resourcesList .resource-item-check').forEach(item => {
-                const text = item.innerText.toLowerCase();
-                item.style.display = text.includes(search) ? 'block' : 'none';
+                let show = true;
+
+                // Фильтр по категории
+                if (category) {
+                    const itemCategory = item.dataset.category;
+                    if (itemCategory != category && !(category === 'null' && !itemCategory)) {
+                        show = false;
+                    }
+                }
+
+                // Фильтр по метке
+                if (show && label) {
+                    const itemLabels = item.dataset.labels ? item.dataset.labels.split(',') : [];
+                    if (!itemLabels.includes(label)) {
+                        show = false;
+                    }
+                }
+
+                // Фильтр по типу
+                if (show && type) {
+                    if (item.dataset.type !== type) {
+                        show = false;
+                    }
+                }
+
+                // Поиск по тексту
+                if (show && search) {
+                    const searchText = item.dataset.search || '';
+                    if (!searchText.includes(search)) {
+                        show = false;
+                    }
+                }
+
+                item.style.display = show ? 'block' : 'none';
+                if (show) visibleCount++;
             });
-        });
-    }
-    
-    // Фильтрация ДЗ
-    const homeworkSearch = document.getElementById('homeworkSearch');
-    if (homeworkSearch) {
-        homeworkSearch.addEventListener('input', function(e) {
-            const search = e.target.value.toLowerCase();
-            
-            document.querySelectorAll('#homeworkList .homework-item').forEach(item => {
-                const text = item.innerText.toLowerCase();
-                item.style.display = text.includes(search) ? 'block' : 'none';
+
+            // Обновляем счетчик
+            document.getElementById('resourceCount').textContent = visibleCount;
+
+            // Показываем/скрываем сообщение о пустом результате
+            const noResourcesMsg = document.getElementById('noResourcesMessage');
+            if (visibleCount === 0) {
+                noResourcesMsg.style.display = 'block';
+            } else {
+                noResourcesMsg.style.display = 'none';
+            }
+
+            // Обновляем отображение активных фильтров
+            updateActiveFilters();
+        }
+
+        function updateActiveFilters() {
+            const category = document.getElementById('resourceCategoryFilter');
+            const label = document.getElementById('resourceLabelFilter');
+            const type = document.getElementById('resourceTypeFilter');
+            const search = document.getElementById('resourceSearch');
+
+            const filters = [];
+
+            if (category.value) {
+                const catText = category.options[category.selectedIndex].text;
+                filters.push(`<span class="badge bg-info me-1">Категория: ${catText}</span>`);
+            }
+
+            if (label.value) {
+                const labelText = label.options[label.selectedIndex].text.split('(')[0].trim();
+                filters.push(`<span class="badge bg-success me-1">Метка: ${labelText}</span>`);
+            }
+
+            if (type.value) {
+                const typeText = type.options[type.selectedIndex].text;
+                filters.push(`<span class="badge bg-warning me-1">Тип: ${typeText}</span>`);
+            }
+
+            if (search.value) {
+                filters.push(`<span class="badge bg-secondary me-1">Поиск: ${search.value}</span>`);
+            }
+
+            document.getElementById('activeFilters').innerHTML = filters.join('');
+        }
+
+        function clearResourceFilters() {
+            document.getElementById('resourceCategoryFilter').value = '';
+            document.getElementById('resourceLabelFilter').value = '';
+            document.getElementById('resourceTypeFilter').value = '';
+            document.getElementById('resourceSearch').value = '';
+            filterResources();
+        }
+
+        // Обновляем фильтр меток при изменении категории
+        document.getElementById('resourceCategoryFilter')?.addEventListener('change', function () {
+            const categoryId = this.value;
+            const labelFilter = document.getElementById('resourceLabelFilter');
+
+            // Показываем только метки, принадлежащие выбранной категории
+            Array.from(labelFilter.options).forEach(option => {
+                if (option.value === '') return;
+
+                const optionCategory = option.dataset.category;
+                if (categoryId && optionCategory != categoryId) {
+                    option.style.display = 'none';
+                } else {
+                    option.style.display = 'block';
+                }
             });
-        });
-    }
-});
 
-function filterTopics() {
-    const category = document.getElementById('topicCategoryFilter').value;
-    const search = document.getElementById('topicSearch').value.toLowerCase();
-    
-    document.querySelectorAll('#topicsList .topic-item').forEach(item => {
-        let show = true;
-        const itemCategory = item.dataset.category;
-        const itemName = item.dataset.name || '';
-        
-        if (category && itemCategory != category && !(category === 'null' && !itemCategory)) {
-            show = false;
-        }
-        
-        if (search && !itemName.includes(search)) {
-            show = false;
-        }
-        
-        item.style.display = show ? 'block' : 'none';
-    });
-}
-
-// Очистка всех полей
-function clearAllFields() {
-    if (confirm('Очистить все поля формы?')) {
-        document.getElementById('lessonForm').reset();
-        document.getElementById('selected-topics').innerHTML = '';
-        document.getElementById('selected-resources').innerHTML = '';
-        selectedTopics = [];
-        selectedResourcesData = {};
-    }
-}
-
-// Копирование публичной ссылки
-function copyLessonLink() {
-    const link = "<?php echo $_SERVER['REQUEST_SCHEME'] . '://' . $_SERVER['HTTP_HOST'] . '/lessons.php?public=1&token=' . ($editLesson['public_link'] ?? ''); ?>";
-    navigator.clipboard.writeText(link).then(() => {
-        alert('Ссылка скопирована в буфер обмена');
-    });
-}
-
-// Инициализация при загрузке страницы
-document.addEventListener('DOMContentLoaded', function() {
-    // Исправляем проблему с модальными окнами Bootstrap
-    var modalElements = document.querySelectorAll('.modal');
-    modalElements.forEach(function(modalEl) {
-        new bootstrap.Modal(modalEl);
-    });
-});
-
-
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        const openModals = document.querySelectorAll('.modal.show');
-        openModals.forEach(modal => {
-            bootstrap.Modal.getInstance(modal).hide();
-        });
-    }
-});
-
-// Функции для фильтрации ресурсов
-function filterResources() {
-    const category = document.getElementById('resourceCategoryFilter').value;
-    const label = document.getElementById('resourceLabelFilter').value;
-    const type = document.getElementById('resourceTypeFilter').value;
-    const search = document.getElementById('resourceSearch').value.toLowerCase();
-    
-    let visibleCount = 0;
-    
-    document.querySelectorAll('#resourcesList .resource-item-check').forEach(item => {
-        let show = true;
-        
-        // Фильтр по категории
-        if (category) {
-            const itemCategory = item.dataset.category;
-            if (itemCategory != category && !(category === 'null' && !itemCategory)) {
-                show = false;
-            }
-        }
-        
-        // Фильтр по метке
-        if (show && label) {
-            const itemLabels = item.dataset.labels ? item.dataset.labels.split(',') : [];
-            if (!itemLabels.includes(label)) {
-                show = false;
-            }
-        }
-        
-        // Фильтр по типу
-        if (show && type) {
-            if (item.dataset.type !== type) {
-                show = false;
-            }
-        }
-        
-        // Поиск по тексту
-        if (show && search) {
-            const searchText = item.dataset.search || '';
-            if (!searchText.includes(search)) {
-                show = false;
-            }
-        }
-        
-        item.style.display = show ? 'block' : 'none';
-        if (show) visibleCount++;
-    });
-    
-    // Обновляем счетчик
-    document.getElementById('resourceCount').textContent = visibleCount;
-    
-    // Показываем/скрываем сообщение о пустом результате
-    const noResourcesMsg = document.getElementById('noResourcesMessage');
-    if (visibleCount === 0) {
-        noResourcesMsg.style.display = 'block';
-    } else {
-        noResourcesMsg.style.display = 'none';
-    }
-    
-    // Обновляем отображение активных фильтров
-    updateActiveFilters();
-}
-
-function updateActiveFilters() {
-    const category = document.getElementById('resourceCategoryFilter');
-    const label = document.getElementById('resourceLabelFilter');
-    const type = document.getElementById('resourceTypeFilter');
-    const search = document.getElementById('resourceSearch');
-    
-    const filters = [];
-    
-    if (category.value) {
-        const catText = category.options[category.selectedIndex].text;
-        filters.push(`<span class="badge bg-info me-1">Категория: ${catText}</span>`);
-    }
-    
-    if (label.value) {
-        const labelText = label.options[label.selectedIndex].text.split('(')[0].trim();
-        filters.push(`<span class="badge bg-success me-1">Метка: ${labelText}</span>`);
-    }
-    
-    if (type.value) {
-        const typeText = type.options[type.selectedIndex].text;
-        filters.push(`<span class="badge bg-warning me-1">Тип: ${typeText}</span>`);
-    }
-    
-    if (search.value) {
-        filters.push(`<span class="badge bg-secondary me-1">Поиск: ${search.value}</span>`);
-    }
-    
-    document.getElementById('activeFilters').innerHTML = filters.join('');
-}
-
-function clearResourceFilters() {
-    document.getElementById('resourceCategoryFilter').value = '';
-    document.getElementById('resourceLabelFilter').value = '';
-    document.getElementById('resourceTypeFilter').value = '';
-    document.getElementById('resourceSearch').value = '';
-    filterResources();
-}
-
-// Обновляем фильтр меток при изменении категории
-document.getElementById('resourceCategoryFilter')?.addEventListener('change', function() {
-    const categoryId = this.value;
-    const labelFilter = document.getElementById('resourceLabelFilter');
-    
-    // Показываем только метки, принадлежащие выбранной категории
-    Array.from(labelFilter.options).forEach(option => {
-        if (option.value === '') return;
-        
-        const optionCategory = option.dataset.category;
-        if (categoryId && optionCategory != categoryId) {
-            option.style.display = 'none';
-        } else {
-            option.style.display = 'block';
-        }
-    });
-    
-    filterResources();
-});
-
-// Добавляем обработчики событий
-document.addEventListener('DOMContentLoaded', function() {
-    // Фильтры для ресурсов
-    const resourceCategoryFilter = document.getElementById('resourceCategoryFilter');
-    const resourceLabelFilter = document.getElementById('resourceLabelFilter');
-    const resourceTypeFilter = document.getElementById('resourceTypeFilter');
-    const resourceSearch = document.getElementById('resourceSearch');
-    
-    if (resourceCategoryFilter) {
-        resourceCategoryFilter.addEventListener('change', filterResources);
-    }
-    
-    if (resourceLabelFilter) {
-        resourceLabelFilter.addEventListener('change', filterResources);
-    }
-    
-    if (resourceTypeFilter) {
-        resourceTypeFilter.addEventListener('change', filterResources);
-    }
-    
-    if (resourceSearch) {
-        resourceSearch.addEventListener('input', filterResources);
-    }
-    
-    // Обновляем счетчик при открытии модального окна
-    const resourcesModal = document.getElementById('resourcesModal');
-    if (resourcesModal) {
-        resourcesModal.addEventListener('shown.bs.modal', function() {
             filterResources();
         });
-    }
-});
 
-// Обновляем функцию openResourcesModal
-function openResourcesModal() {
-    const modal = new bootstrap.Modal(document.getElementById('resourcesModal'));
-    
-    // Обновляем чекбоксы в соответствии с выбранными ресурсами
-    document.querySelectorAll('#resourcesList .resource-checkbox').forEach(cb => {
-        cb.checked = selectedResourcesData.hasOwnProperty(cb.value);
-    });
-    
-    // Сбрасываем фильтры
-    clearResourceFilters();
-    
-    modal.show();
-}
+        // Добавляем обработчики событий
+        document.addEventListener('DOMContentLoaded', function () {
+            // Фильтры для ресурсов
+            const resourceCategoryFilter = document.getElementById('resourceCategoryFilter');
+            const resourceLabelFilter = document.getElementById('resourceLabelFilter');
+            const resourceTypeFilter = document.getElementById('resourceTypeFilter');
+            const resourceSearch = document.getElementById('resourceSearch');
+
+            if (resourceCategoryFilter) {
+                resourceCategoryFilter.addEventListener('change', filterResources);
+            }
+
+            if (resourceLabelFilter) {
+                resourceLabelFilter.addEventListener('change', filterResources);
+            }
+
+            if (resourceTypeFilter) {
+                resourceTypeFilter.addEventListener('change', filterResources);
+            }
+
+            if (resourceSearch) {
+                resourceSearch.addEventListener('input', filterResources);
+            }
+
+            // Обновляем счетчик при открытии модального окна
+            const resourcesModal = document.getElementById('resourcesModal');
+            if (resourcesModal) {
+                resourcesModal.addEventListener('shown.bs.modal', function () {
+                    filterResources();
+                });
+            }
+        });
+
+        // Обновляем функцию openResourcesModal
+        function openResourcesModal() {
+            const modal = new bootstrap.Modal(document.getElementById('resourcesModal'));
+
+            // Обновляем чекбоксы в соответствии с выбранными ресурсами
+            document.querySelectorAll('#resourcesList .resource-checkbox').forEach(cb => {
+                cb.checked = selectedResourcesData.hasOwnProperty(cb.value);
+            });
+
+            // Сбрасываем фильтры
+            clearResourceFilters();
+
+            modal.show();
+        }
     </script>
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
+
 </html>

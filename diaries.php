@@ -978,27 +978,47 @@ if ($publicView) {
             </div>
             
         <?php elseif ($action === 'list'): ?>
-            <!-- Заголовок и кнопки действий -->
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2><i class="bi bi-journals"></i> Дневники</h2>
-                <div>
-                    <button type="button" class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#importCsvModal">
-                        <i class="bi bi-upload"></i> Импорт CSV
+<!-- Заголовок и кнопки действий -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-journals"></i> Дневники</h2>
+    
+    <div class="d-flex gap-2">
+        <!-- Кнопка создания дневника всегда видна -->
+        <a href="?action=add" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> <span class="d-none d-sm-inline">Создать</span>
+        </a>
+        
+        <!-- Выпадающее меню для импорта/экспорта -->
+        <div class="dropdown">
+            <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="importExportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-files"></i> <span class="d-none d-sm-inline">Импорт/Экспорт</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="importExportDropdown">
+                <li>
+                    <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#importCsvModal">
+                        <i class="bi bi-upload text-success"></i> Импорт CSV
                     </button>
-                    <button type="button" class="btn btn-info me-2" data-bs-toggle="modal" data-bs-target="#importJsonModal">
-                        <i class="bi bi-filetype-json"></i> Импорт JSON
+                </li>
+                <li>
+                    <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#importJsonModal">
+                        <i class="bi bi-filetype-json text-info"></i> Импорт JSON
                     </button>
-                    <a href="?export_csv=1" class="btn btn-warning me-2">
-                        <i class="bi bi-filetype-csv"></i> Экспорт CSV
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <a class="dropdown-item" href="?export_csv=1">
+                        <i class="bi bi-filetype-csv text-warning"></i> Экспорт CSV
                     </a>
-                    <a href="?export_json=1" class="btn btn-secondary me-2">
-                        <i class="bi bi-filetype-json"></i> Экспорт JSON
+                </li>
+                <li>
+                    <a class="dropdown-item" href="?export_json=1">
+                        <i class="bi bi-filetype-json text-secondary"></i> Экспорт JSON
                     </a>
-                    <a href="?action=add" class="btn btn-primary">
-                        <i class="bi bi-plus-circle"></i> Создать дневник
-                    </a>
-                </div>
-            </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
             
             <!-- Статистика -->
             <div class="stats-card mb-4">

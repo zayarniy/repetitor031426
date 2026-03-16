@@ -618,8 +618,8 @@ $totalHours = round(($stats['general']['total_minutes'] ?? 0) / 60, 1);
                         <td class="text-center"><?php echo $student['lessons_count']; ?></td>
                         <td class="text-center"><?php echo $student['completed_count']; ?></td>
                         <td class="text-center"><?php echo $student['cancelled_count']; ?></td>
-                        <td class="text-end"><?php echo number_format($student['total_cost'], 0, ',', ' '); ?> ₽</td>
-                        <td class="text-end"><?php echo number_format($student['paid_cost'], 0, ',', ' '); ?> ₽</td>
+                        <td class="text-end"><?php echo $student['total_cost']? number_format($student['total_cost'], 0, ',', ' '):'0'; ?> ₽</td>
+                        <td class="text-end"><?php echo $student['paid_cost']?number_format($student['paid_cost'], 0, ',', ' '):'0'; ?> ₽</td>
                         <td class="text-center">
                             <?php if ($student['avg_grade']): ?>
                                 <span class="badge-grade"><?php echo round($student['avg_grade'], 1); ?></span>
