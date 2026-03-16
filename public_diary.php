@@ -62,13 +62,16 @@ if ($diary && !isset($error)) {
 }
 
 // Функция для парсинга тем с категориями
-function parseTopicsWithCategories($topicsString) {
+function parseTopicsWithCategories($topicsString)
+{
     $result = [];
-    if (empty($topicsString)) return $result;
-    
+    if (empty($topicsString))
+        return $result;
+
     $topics = explode('||', $topicsString);
     foreach ($topics as $topic) {
-        if (empty($topic)) continue;
+        if (empty($topic))
+            continue;
         $parts = explode('|', $topic);
         if (count($parts) >= 4) {
             $result[] = [
@@ -89,10 +92,10 @@ foreach ($lessons as $lesson) {
     if (!isset($groupedLessons[$month])) {
         $groupedLessons[$month] = [];
     }
-    
+
     // Парсим темы с категориями
     $lesson['topics_parsed'] = parseTopicsWithCategories($lesson['topics_with_categories']);
-    
+
     // Группируем темы по категориям для этого занятия
     $groupedTopics = [];
     foreach ($lesson['topics_parsed'] as $topic) {
@@ -106,7 +109,7 @@ foreach ($lessons as $lesson) {
         $groupedTopics[$category]['topics'][] = $topic['name'];
     }
     $lesson['topics_by_category'] = $groupedTopics;
-    
+
     $groupedLessons[$month][] = $lesson;
 }
 
@@ -132,7 +135,7 @@ foreach ($lessons as $lesson) {
         $gradeSum += $lesson['grade_lesson'];
         $gradeCount++;
     }
-    
+
     // Собираем статистику по категориям
     $topics = parseTopicsWithCategories($lesson['topics_with_categories']);
     foreach ($topics as $topic) {
@@ -151,11 +154,58 @@ foreach ($lessons as $lesson) {
     }
 }
 
+// Функция для преобразования ссылок в тексте в кликабельные
+function makeLinksClickable($text)
+{
+    if (empty($text))
+        return $text;
+
+    // Экранируем HTML специальные символы
+    $text = htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+
+    // Регулярное выражение для поиска URL
+    $pattern = '/(https?:\/\/[^\s<>"\'{}|\\^`[\]]+)/i';
+
+    // Заменяем ссылки на кликабельные
+    $text = preg_replace_callback($pattern, function ($matches) {
+        $url = $matches[0];
+        $displayUrl = strlen($url) > 50 ? substr($url, 0, 47) . '...' : $url;
+        return '<a href="' . $url . '" target="_blank" rel="noopener noreferrer" class="text-break text-decoration-none">' .
+            '<i class="bi bi-box-arrow-up-right me-1"></i>' . $displayUrl . '</a>';
+    }, $text);
+
+    // Заменяем переносы строк на <br>
+    $text = nl2br($text);
+
+    return $text;
+}
+
+// Функция для извлечения всех ссылок из текста (для отображения отдельно)
+function extractLinks($text)
+{
+    if (empty($text))
+        return [];
+
+    $links = [];
+    $pattern = '/(https?:\/\/[^\s<>"\'{}|\\^`[\]]+)/i';
+    preg_match_all($pattern, $text, $matches);
+
+    foreach ($matches[0] as $url) {
+        $links[] = [
+            'url' => $url,
+            'display' => strlen($url) > 40 ? substr($url, 0, 37) . '...' : $url
+        ];
+    }
+
+    return array_unique($links, SORT_REGULAR);
+}
+
 $avgGrade = $gradeCount > 0 ? round($gradeSum / $gradeCount, 1) : 0;
 $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons) * 100) : 0;
 ?>
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -168,13 +218,13 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
             min-height: 100vh;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        
+
         .public-container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
         }
-        
+
         .diary-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -185,7 +235,7 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
             position: relative;
             overflow: hidden;
         }
-        
+
         .diary-header::before {
             content: '';
             position: absolute;
@@ -193,15 +243,20 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
             right: -50%;
             width: 200%;
             height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
             animation: rotate 20s linear infinite;
         }
-        
+
         @keyframes rotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
         }
-        
+
         .diary-header h1 {
             font-size: 2.5em;
             font-weight: 700;
@@ -209,14 +264,14 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
             position: relative;
             z-index: 1;
         }
-        
+
         .diary-header .student-info {
             font-size: 1.2em;
             opacity: 0.95;
             position: relative;
             z-index: 1;
         }
-        
+
         .diary-header .tutor-info {
             position: absolute;
             bottom: 20px;
@@ -225,39 +280,39 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
             opacity: 0.8;
             z-index: 1;
         }
-        
+
         .stats-card {
             background: white;
             border-radius: 15px;
             padding: 20px;
             margin-bottom: 20px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
             transition: transform 0.3s;
         }
-        
+
         .stats-card:hover {
             transform: translateY(-5px);
         }
-        
+
         .stats-number {
             font-size: 2.5em;
             font-weight: bold;
             color: #667eea;
             line-height: 1.2;
         }
-        
+
         .stats-label {
             color: #666;
             font-size: 0.9em;
         }
-        
+
         .category-stats {
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
             margin-top: 15px;
         }
-        
+
         .category-stat-item {
             background: #f8f9fa;
             border-radius: 20px;
@@ -265,46 +320,46 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
             border-left: 4px solid;
             font-size: 0.9em;
         }
-        
+
         .lesson-card {
             background: white;
             border-radius: 15px;
             padding: 20px;
             margin-bottom: 15px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             transition: all 0.3s ease;
             border-left: 4px solid;
         }
-        
+
         .lesson-card:hover {
             transform: translateX(5px);
-            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
         }
-        
+
         .lesson-card.completed {
             border-left-color: #28a745;
         }
-        
+
         .lesson-card.cancelled {
             border-left-color: #dc3545;
             opacity: 0.7;
         }
-        
+
         .lesson-card.planned {
             border-left-color: #ffc107;
         }
-        
+
         .lesson-date {
             font-size: 1.1em;
             font-weight: 600;
             color: #333;
         }
-        
+
         .lesson-time {
             color: #667eea;
             font-weight: 500;
         }
-        
+
         .grade-badge {
             display: inline-block;
             width: 30px;
@@ -315,35 +370,58 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
             font-weight: bold;
             margin-right: 5px;
         }
-        
-        .grade-5 { background: #28a745; color: white; }
-        .grade-4 { background: #17a2b8; color: white; }
-        .grade-3 { background: #ffc107; color: #333; }
-        .grade-2 { background: #fd7e14; color: white; }
-        .grade-1 { background: #dc3545; color: white; }
-        .grade-0 { background: #6c757d; color: white; }
-        
+
+        .grade-5 {
+            background: #28a745;
+            color: white;
+        }
+
+        .grade-4 {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .grade-3 {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .grade-2 {
+            background: #fd7e14;
+            color: white;
+        }
+
+        .grade-1 {
+            background: #dc3545;
+            color: white;
+        }
+
+        .grade-0 {
+            background: #6c757d;
+            color: white;
+        }
+
         .category-section {
             margin-bottom: 15px;
             padding: 10px;
             border-radius: 10px;
             background: #f8f9fa;
         }
-        
+
         .category-title {
             display: flex;
             align-items: center;
             margin-bottom: 8px;
             font-weight: 600;
         }
-        
+
         .category-color {
             width: 16px;
             height: 16px;
             border-radius: 4px;
             margin-right: 8px;
         }
-        
+
         .topic-badge {
             background: white;
             border-radius: 15px;
@@ -353,9 +431,9 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
             margin-right: 5px;
             margin-bottom: 5px;
             border-left: 3px solid;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
-        
+
         .month-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -363,35 +441,35 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
             border-radius: 10px;
             margin: 30px 0 15px;
         }
-        
+
         .info-item {
             padding: 8px 0;
             border-bottom: 1px solid #f0f0f0;
         }
-        
+
         .info-item:last-child {
             border-bottom: none;
         }
-        
+
         .info-label {
             font-weight: 600;
             color: #666;
             font-size: 0.9em;
         }
-        
+
         .info-value {
             color: #333;
         }
-        
+
         .watermark {
             text-align: center;
             margin-top: 40px;
             padding: 20px;
             color: #666;
             font-size: 0.9em;
-            border-top: 1px solid rgba(0,0,0,0.1);
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
         }
-        
+
         .error-container {
             max-width: 500px;
             margin: 100px auto;
@@ -399,14 +477,14 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
             padding: 40px;
             background: white;
             border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
         }
-        
+
         .error-container h1 {
             color: #dc3545;
             margin-bottom: 20px;
         }
-        
+
         .btn-public {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -418,16 +496,16 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
             margin-top: 20px;
             transition: transform 0.3s;
         }
-        
+
         .btn-public:hover {
             transform: translateY(-2px);
             color: white;
         }
-        
+
         .tooltip-inner {
             background-color: #333;
         }
-        
+
         .stat-highlight {
             font-size: 1.1em;
             font-weight: 600;
@@ -435,6 +513,7 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
         }
     </style>
 </head>
+
 <body>
     <div class="public-container">
         <?php if (isset($error)): ?>
@@ -452,21 +531,22 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
             <!-- Шапка дневника -->
             <div class="diary-header">
                 <h1>
-                    <i class="bi bi-journal-bookmark-fill"></i> 
+                    <i class="bi bi-journal-bookmark-fill"></i>
                     <?php echo htmlspecialchars($diary['name']); ?>
                 </h1>
                 <div class="student-info">
-                    <i class="bi bi-person-circle"></i> 
-                    <?php 
-                    echo htmlspecialchars($diary['student_last_name'] . ' ' . $diary['student_first_name'] . ' ' . ($diary['student_middle_name'] ?? '')); 
-                    if ($diary['student_class']): 
+                    <i class="bi bi-person-circle"></i>
+                    <?php
+                    echo htmlspecialchars($diary['student_last_name'] . ' ' . $diary['student_first_name'] . ' ' . ($diary['student_middle_name'] ?? ''));
+                    if ($diary['student_class']):
                         echo ' (' . htmlspecialchars($diary['student_class']) . ' класс)';
                     endif;
                     ?>
                 </div>
                 <?php if ($diary['category_name']): ?>
                     <div class="mt-2">
-                        <span class="badge" style="background: <?php echo $diary['category_color'] ?? '#808080'; ?>; color: white; padding: 5px 15px;">
+                        <span class="badge"
+                            style="background: <?php echo $diary['category_color'] ?? '#808080'; ?>; color: white; padding: 5px 15px;">
                             <i class="bi bi-tag"></i> <?php echo htmlspecialchars($diary['category_name']); ?>
                         </span>
                     </div>
@@ -477,10 +557,11 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
                     </div>
                 <?php endif; ?>
                 <div class="tutor-info">
-                    <i class="bi bi-person-workspace"></i> Репетитор: <?php echo htmlspecialchars($diary['tutor_first_name'] . ' ' . $diary['tutor_last_name']); ?>
+                    <i class="bi bi-person-workspace"></i> Репетитор:
+                    <?php echo htmlspecialchars($diary['tutor_first_name'] . ' ' . $diary['tutor_last_name']); ?>
                 </div>
             </div>
-            
+
             <!-- Статистика -->
             <div class="row mb-4">
                 <div class="col-md-3">
@@ -508,23 +589,23 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
                     </div>
                 </div>
             </div>
-            
+
             <!-- Статистика по категориям -->
             <?php if (!empty($categoryStats)): ?>
-            <div class="stats-card mb-4">
-                <h5><i class="bi bi-tags"></i> Изучаемые темы по категориям</h5>
-                <div class="category-stats">
-                    <?php foreach ($categoryStats as $category => $stat): ?>
-                        <div class="category-stat-item" style="border-left-color: <?php echo $stat['color']; ?>;" 
-                             title="<?php echo htmlspecialchars(implode(', ', $stat['topics'])); ?>">
-                            <span class="stat-highlight"><?php echo htmlspecialchars($category); ?></span>
-                            <span class="badge bg-secondary ms-2"><?php echo $stat['count']; ?></span>
-                        </div>
-                    <?php endforeach; ?>
+                <div class="stats-card mb-4">
+                    <h5><i class="bi bi-tags"></i> Изучаемые темы по категориям</h5>
+                    <div class="category-stats">
+                        <?php foreach ($categoryStats as $category => $stat): ?>
+                            <div class="category-stat-item" style="border-left-color: <?php echo $stat['color']; ?>;"
+                                title="<?php echo htmlspecialchars(implode(', ', $stat['topics'])); ?>">
+                                <span class="stat-highlight"><?php echo htmlspecialchars($category); ?></span>
+                                <span class="badge bg-secondary ms-2"><?php echo $stat['count']; ?></span>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
-            </div>
             <?php endif; ?>
-            
+
             <!-- Информация о дневнике -->
             <div class="row mb-4">
                 <div class="col-md-6">
@@ -541,7 +622,7 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
                         <div class="info-item">
                             <span class="info-label">Длительность занятия:</span>
                             <span class="info-value float-end">
-                                <?php 
+                                <?php
                                 if ($diary['lesson_duration']) {
                                     $hours = floor($diary['lesson_duration'] / 60);
                                     $minutes = $diary['lesson_duration'] % 60;
@@ -554,11 +635,13 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
                         </div>
                         <div class="info-item">
                             <span class="info-label">Дата создания:</span>
-                            <span class="info-value float-end"><?php echo date('d.m.Y', strtotime($diary['created_at'])); ?></span>
+                            <span
+                                class="info-value float-end"><?php echo date('d.m.Y', strtotime($diary['created_at'])); ?></span>
                         </div>
                         <div class="info-item">
                             <span class="info-label">Последнее обновление:</span>
-                            <span class="info-value float-end"><?php echo date('d.m.Y', strtotime($diary['updated_at'])); ?></span>
+                            <span
+                                class="info-value float-end"><?php echo date('d.m.Y', strtotime($diary['updated_at'])); ?></span>
                         </div>
                     </div>
                 </div>
@@ -575,24 +658,24 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
                             </div>
                         </div>
                         <?php if ($gradeCount > 0): ?>
-                        <div class="mb-3">
-                            <div class="d-flex justify-content-between mb-1">
-                                <span>Средний балл</span>
-                                <span><?php echo $avgGrade; ?> / 5</span>
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span>Средний балл</span>
+                                    <span><?php echo $avgGrade; ?> / 5</span>
+                                </div>
+                                <div class="progress" style="height: 10px;">
+                                    <?php $gradePercent = round(($avgGrade / 5) * 100); ?>
+                                    <div class="progress-bar bg-info" style="width: <?php echo $gradePercent; ?>%"></div>
+                                </div>
                             </div>
-                            <div class="progress" style="height: 10px;">
-                                <?php $gradePercent = round(($avgGrade / 5) * 100); ?>
-                                <div class="progress-bar bg-info" style="width: <?php echo $gradePercent; ?>%"></div>
-                            </div>
-                        </div>
                         <?php endif; ?>
                     </div>
                 </div>
             </div>
-            
+
             <!-- Список занятий -->
             <h3 class="mb-3"><i class="bi bi-calendar-check"></i> Последние занятия</h3>
-            
+
             <?php if (empty($lessons)): ?>
                 <div class="alert alert-info text-center py-5">
                     <i class="bi bi-calendar-x" style="font-size: 3rem;"></i>
@@ -603,10 +686,10 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
                     <div class="month-header">
                         <h4 class="mb-0"><?php echo date('F Y', strtotime($month . '-01')); ?></h4>
                     </div>
-                    
-                    <?php foreach ($monthLessons as $lesson): 
+
+                    <?php foreach ($monthLessons as $lesson):
                         $statusClass = $lesson['is_completed'] ? 'completed' : ($lesson['is_cancelled'] ? 'cancelled' : 'planned');
-                    ?>
+                        ?>
                         <div class="lesson-card <?php echo $statusClass; ?>">
                             <div class="row">
                                 <div class="col-md-2">
@@ -616,7 +699,7 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
                                         <i class="bi bi-clock"></i> <?php echo $lesson['duration']; ?> мин
                                     </div>
                                 </div>
-                                
+
                                 <div class="col-md-3">
                                     <div class="mb-2">
                                         <?php if ($lesson['is_completed']): ?>
@@ -627,7 +710,7 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
                                             <span class="badge bg-warning"><i class="bi bi-clock"></i> Запланировано</span>
                                         <?php endif; ?>
                                     </div>
-                                    
+
                                     <?php if ($lesson['grade_lesson'] !== null && $lesson['grade_lesson'] !== ''): ?>
                                         <div class="mb-1">
                                             <span class="grade-badge grade-<?php echo $lesson['grade_lesson']; ?>">
@@ -636,7 +719,7 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
                                             <small class="text-muted">оценка за занятие</small>
                                         </div>
                                     <?php endif; ?>
-                                    
+
                                     <?php if ($lesson['grade_homework'] !== null && $lesson['grade_homework'] !== ''): ?>
                                         <div class="mb-1">
                                             <span class="grade-badge grade-<?php echo $lesson['grade_homework']; ?>">
@@ -646,7 +729,7 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
                                         </div>
                                     <?php endif; ?>
                                 </div>
-                                
+
                                 <div class="col-md-5">
                                     <!-- Темы, сгруппированные по категориям -->
                                     <?php if (!empty($lesson['topics_by_category'])): ?>
@@ -669,7 +752,7 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
                                             <?php endforeach; ?>
                                         </div>
                                     <?php endif; ?>
-                                    
+
                                     <?php if (!empty($lesson['comment'])): ?>
                                         <div class="mb-2">
                                             <small class="text-muted"><i class="bi bi-chat"></i> Комментарий:</small>
@@ -678,23 +761,44 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
                                             </div>
                                         </div>
                                     <?php endif; ?>
-                                    
-                                    <?php if (!empty($lesson['homework_manual'])): ?>
-                                        <div class="mb-2">
-                                            <small class="text-muted"><i class="bi bi-journal-text"></i> ДЗ:</small>
-                                            <div class="small bg-light p-2 rounded">
-                                                <?php echo nl2br(htmlspecialchars($lesson['homework_manual'])); ?>
-                                            </div>
-                                        </div>
-                                    <?php endif; ?>
+<!-- Домашнее задание с анализом ссылок -->
+<?php if (!empty($lesson['homework_manual'])): 
+    $homeworkLinks = extractLinks($lesson['homework_manual']);
+?>
+    <div class="mb-2">
+        <small class="text-muted"><i class="bi bi-journal-text"></i> ДЗ:</small>
+        
+        <!-- Отдельный блок для ссылок, если они есть -->
+        <?php if (!empty($homeworkLinks)): ?>
+            <div class="homework-links mt-1 mb-2">
+                <?php foreach ($homeworkLinks as $link): ?>
+                    <a href="<?php echo htmlspecialchars($link['url']); ?>" 
+                       target="_blank" 
+                       rel="noopener noreferrer" 
+                       class="btn btn-sm btn-outline-primary me-1 mb-1"
+                       title="<?php echo htmlspecialchars($link['url']); ?>">
+                        <i class="bi bi-link-45deg"></i> <?php echo $link['display']; ?>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+        
+        <!-- Текст домашнего задания с преобразованными ссылками -->
+        <div class="homework-text bg-light p-2 rounded">
+            <?php echo makeLinksClickable($lesson['homework_manual']); ?>
+        </div>
+    </div>
+<?php endif; ?>
+
                                 </div>
-                                
+
                                 <div class="col-md-2">
                                     <?php if (!empty($lesson['link_url'])): ?>
                                         <div class="mb-2">
                                             <small class="text-muted"><i class="bi bi-link"></i> Ссылка:</small>
                                             <div>
-                                                <a href="<?php echo htmlspecialchars($lesson['link_url']); ?>" target="_blank" class="small text-break">
+                                                <a href="<?php echo htmlspecialchars($lesson['link_url']); ?>" target="_blank"
+                                                    class="small text-break">
                                                     <?php echo htmlspecialchars(substr($lesson['link_url'], 0, 30) . (strlen($lesson['link_url']) > 30 ? '...' : '')); ?>
                                                 </a>
                                             </div>
@@ -709,23 +813,24 @@ $activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons
                     <?php endforeach; ?>
                 <?php endforeach; ?>
             <?php endif; ?>
-            
+
             <!-- Водяной знак -->
             <div class="watermark">
                 <i class="bi bi-journal-bookmark-fill"></i>
-                Создано в системе "Дневник репетитора" • 
+                Создано в системе "Дневник репетитора" •
                 <?php echo date('Y'); ?>
             </div>
         <?php endif; ?>
     </div>
-    
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Инициализация всплывающих подсказок
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        var tooltipList = tooltipTriggerList.map(function(tooltipTriggerEl) {
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl);
         });
     </script>
 </body>
+
 </html>
