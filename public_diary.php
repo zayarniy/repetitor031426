@@ -87,6 +87,7 @@ function parseTopicsWithCategories($topicsString)
 // Группировка занятий по месяцам
 $groupedLessons = [];
 foreach ($lessons as $lesson) {
+    
     $month = date('Y-m', strtotime($lesson['lesson_date']));
     if (!isset($groupedLessons[$month])) {
         $groupedLessons[$month] = [];
@@ -262,6 +263,117 @@ $stmt = $pdo->prepare("
     $dates = $stmt->fetch();
     $firstLessonDate = $dates['first_date'];
     $lastLessonDate = $dates['last_date'];
+
+    
+
+// ОТДЕЛЬНЫЙ ЗАПРОС для детальной статистики только по ПРОВЕДЕННЫМ занятиям
+$topicsDetailedStats = [];
+
+if ($diary && !isset($error)) {
+    $stmt = $pdo->prepare("
+        SELECT 
+            t.id as topic_id,
+            t.name as topic_name,
+            COALESCE(c.name, 'Без категории') as category_name,
+            COALESCE(c.color, '#808080') as category_color,
+            COUNT(*) as usage_count,
+            MAX(l.lesson_date) as last_used_date
+        FROM lessons l
+        INNER JOIN lesson_topics lt ON l.id = lt.lesson_id
+        INNER JOIN topics t ON lt.topic_id = t.id
+        LEFT JOIN categories c ON t.category_id = c.id
+        WHERE l.diary_id = ? 
+            AND l.is_completed = 1
+            AND l.is_cancelled = 0
+        GROUP BY t.id, t.name, c.name, c.color
+        ORDER BY category_name, usage_count DESC, t.name
+    ");
+    $stmt->execute([$diary['id']]);
+    $topicsData = $stmt->fetchAll();
+    
+    // Группируем по категориям (без использования ссылок в цикле)
+    $tempStats = [];
+    
+    foreach ($topicsData as $topic) {
+        $category = $topic['category_name'];
+        
+        if (!isset($tempStats[$category])) {
+            $tempStats[$category] = [
+                'color' => $topic['category_color'],
+                'topics' => []
+            ];
+        }
+        
+        $tempStats[$category]['topics'][$topic['topic_id']] = [
+            'name' => $topic['topic_name'],
+            'count' => (int)$topic['usage_count'],
+            'last_used' => $topic['last_used_date']
+        ];
+    }
+    
+    // Сортируем темы внутри каждой категории (без использования ссылок)
+    $topicsDetailedStats = [];
+    foreach ($tempStats as $category => $data) {
+        // Создаем копию данных
+        $categoryData = [
+            'color' => $data['color'],
+            'topics' => []
+        ];
+        
+        // Сортируем темы
+        $topics = $data['topics'];
+        uasort($topics, function($a, $b) {
+            return $b['count'] - $a['count'];
+        });
+        
+        $categoryData['topics'] = $topics;
+        $topicsDetailedStats[$category] = $categoryData;
+    }
+    
+    // Сортируем категории по названию
+    ksort($topicsDetailedStats);
+}
+
+// Статистика для отображения в карточках
+$totalLessons = count($lessons);
+$completedLessons = 0;
+$cancelledLessons = 0;
+$avgGrade = 0;
+$gradeSum = 0;
+$gradeCount = 0;
+
+foreach ($lessons as $lesson) {
+    if ($lesson['is_completed']) {
+        $completedLessons++;
+    }
+    if ($lesson['is_cancelled']) {
+        $cancelledLessons++;
+    }
+    if ($lesson['grade_lesson'] !== null && $lesson['grade_lesson'] !== '') {
+        $gradeSum += $lesson['grade_lesson'];
+        $gradeCount++;
+    }
+}
+
+$avgGrade = $gradeCount > 0 ? round($gradeSum / $gradeCount, 1) : 0;
+$activePercentage = $totalLessons > 0 ? round(($completedLessons / $totalLessons) * 100) : 0;
+
+// Форматируем общее время
+$totalHours = floor($totalMinutes / 60);
+$totalMinutesRemainder = $totalMinutes % 60;
+$totalTimeFormatted = '';
+if ($totalHours > 0) {
+    $totalTimeFormatted .= $totalHours . ' ч ';
+}
+if ($totalMinutesRemainder > 0 || $totalHours == 0) {
+    $totalTimeFormatted .= $totalMinutesRemainder . ' мин';
+}
+
+// Функция для склонения числительных (добавьте в начало файла)
+function getNumEnding($number, $titles) {
+    $cases = array(2, 0, 1, 1, 1, 2);
+    return $titles[($number % 100 > 4 && $number % 100 < 20) ? 2 : $cases[min($number % 10, 5)]];
+}
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -723,21 +835,150 @@ $stmt = $pdo->prepare("
                     </div>
                 </div>
             </div>
-            <!-- Статистика по категориям -->
-            <?php if (!empty($categoryStats)): ?>
-                <div class="stats-card mb-4">
-                    <h5><i class="bi bi-tags"></i> Изучаемые темы по категориям</h5>
-                    <div class="category-stats">
-                        <?php foreach ($categoryStats as $category => $stat): ?>
-                            <div class="category-stat-item" style="border-left-color: <?php echo $stat['color']; ?>;"
-                                title="<?php echo htmlspecialchars(implode(', ', $stat['topics'])); ?>">
-                                <span class="stat-highlight"><?php echo htmlspecialchars($category); ?></span>
-                                <span class="badge bg-secondary ms-2"><?php echo $stat['count']; ?></span>
+
+<!-- Статистика по категориям с раскрывающимся списком -->
+<?php if (!empty($topicsDetailedStats) && is_array($topicsDetailedStats)): ?>
+<div class="stats-card mb-4">
+    <h5><i class="bi bi-tags"></i> Изучаемые темы по категориям</h5>
+    <p class="text-muted small mb-2">
+        <i class="bi bi-info-circle"></i> 
+        Статистика только по <strong>проведенным занятиям</strong> (отмененные не учитываются)
+    </p>
+    
+    <div class="category-stats">
+        <?php foreach ($topicsDetailedStats as $category => $data): 
+            // Пропускаем, если данные не являются массивом
+            if (!is_array($data)) {
+                // Если данные - строка, преобразуем в массив
+                $data = [
+                    'color' => '#808080',
+                    'topics' => []
+                ];
+            }
+            
+            // Убеждаемся, что поле topics существует и является массивом
+            if (!isset($data['topics']) || !is_array($data['topics'])) {
+                $data['topics'] = [];
+            }
+            
+            $totalTopicsInCategory = count($data['topics']);
+            
+            // Пропускаем категории без тем
+            if ($totalTopicsInCategory === 0) {
+                continue;
+            }
+            
+            // Безопасно подсчитываем общее количество использований
+            $totalUsageInCategory = 0;
+            foreach ($data['topics'] as $topic) {
+                if (is_array($topic) && isset($topic['count'])) {
+                    $totalUsageInCategory += (int)$topic['count'];
+                }
+            }
+            
+            $color = isset($data['color']) ? $data['color'] : '#808080';
+        ?>
+            <div class="category-item mb-2">
+                <div class="category-header d-flex align-items-center justify-content-between p-2 rounded" 
+                     style="border-left: 4px solid <?php echo $color; ?>; background: rgba(<?php echo hexdec(substr($color, 1, 2)) . ', ' . hexdec(substr($color, 3, 2)) . ', ' . hexdec(substr($color, 5, 2)); ?>, 0.1); cursor: pointer;"
+                     onclick="toggleCategory('<?php echo md5($category); ?>')">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-chevron-right me-2" id="chevron-<?php echo md5($category); ?>" style="transition: transform 0.3s;"></i>
+                        <span class="stat-highlight"><?php echo htmlspecialchars($category); ?></span>
+                        <span class="badge bg-secondary ms-2"><?php echo $totalTopicsInCategory; ?> <?php echo getNumEnding($totalTopicsInCategory, ['тема', 'темы', 'тем']); ?></span>
+                    </div>
+                    <div>
+                        <span class="badge bg-primary me-2"><?php echo $totalUsageInCategory; ?> <?php echo getNumEnding($totalUsageInCategory, ['раз', 'раза', 'раз']); ?></span>
+                        <span class="badge" style="background: <?php echo $color; ?>; color: white;">●</span>
+                    </div>
+                </div>
+                
+                <!-- Скрытый список тем -->
+                <div id="category-<?php echo md5($category); ?>" class="category-topics mt-2" style="display: none;">
+                    <div class="row">
+                        <?php foreach ($data['topics'] as $topicId => $topic): 
+                            // Если тема - строка, преобразуем в массив
+                            if (is_string($topic)) {
+                                $topic = [
+                                    'name' => $topic,
+                                    'count' => 1,
+                                    'last_used' => null
+                                ];
+                            }
+                            
+                            if (!is_array($topic) || !isset($topic['name'])) {
+                                continue;
+                            }
+                            
+                            $topicName = $topic['name'];
+                            $topicCount = isset($topic['count']) ? (int)$topic['count'] : 1;
+                            $topicLastUsed = isset($topic['last_used']) ? $topic['last_used'] : null;
+                        ?>
+                            <div class="col-md-6">
+                                <div class="topic-stat-item p-2 mb-1 rounded" 
+                                     style="border-left: 3px solid <?php echo $color; ?>; background: #f8f9fa;">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span>
+                                            <i class="bi bi-dot" style="color: <?php echo $color; ?>;"></i>
+                                            <?php echo htmlspecialchars($topicName); ?>
+                                        </span>
+                                        <div>
+                                            <span class="badge bg-primary rounded-pill"><?php echo $topicCount; ?> <?php echo getNumEnding($topicCount, ['раз', 'раза', 'раз']); ?></span>
+                                            <?php if ($topicLastUsed): ?>
+                                                <small class="text-muted ms-2">
+                                                    <i class="bi bi-calendar"></i> <?php echo date('d.m.Y', strtotime($topicLastUsed)); ?>
+                                                </small>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         <?php endforeach; ?>
                     </div>
                 </div>
-            <?php endif; ?>
+            </div>
+        <?php endforeach; ?>
+    </div>
+    
+    <?php 
+    // Подсчитываем общее количество уникальных тем
+    $totalUniqueTopics = 0;
+    $validCategoryCount = 0;
+    
+    if (is_array($topicsDetailedStats)) {
+        foreach ($topicsDetailedStats as $category) {
+            if (is_array($category) && isset($category['topics']) && is_array($category['topics'])) {
+                $totalUniqueTopics += count($category['topics']);
+                $validCategoryCount++;
+            }
+        }
+    }
+    ?>
+    <div class="text-muted small mt-2 text-center">
+        <i class="bi bi-pie-chart"></i> 
+        Всего изучено <strong><?php echo $totalUniqueTopics; ?></strong> 
+        <?php echo getNumEnding($totalUniqueTopics, ['уникальная тема', 'уникальные темы', 'уникальных тем']); ?> 
+        в <strong><?php echo $validCategoryCount; ?></strong> 
+        <?php echo getNumEnding($validCategoryCount, ['категории', 'категориях', 'категориях']); ?>
+    </div>
+</div>
+<?php elseif (isset($diary) && !isset($error)): ?>
+<div class="stats-card mb-4">
+    <h5><i class="bi bi-tags"></i> Изучаемые темы</h5>
+    <p class="text-muted text-center py-3">
+        <i class="bi bi-info-circle"></i> 
+        Нет данных по проведенным занятиям. Статистика появится после проведения первых уроков.
+    </p>
+</div>
+<?php elseif (isset($diary) && !isset($error)): ?>
+<div class="stats-card mb-4">
+    <h5><i class="bi bi-tags"></i> Изучаемые темы</h5>
+    <p class="text-muted text-center py-3">
+        <i class="bi bi-info-circle"></i> 
+        Нет данных по проведенным занятиям. Статистика появится после проведения первых уроков.
+    </p>
+</div>
+<?php endif; ?>
             <!-- Список занятий -->
             <h3 class="mb-3"><i class="bi bi-calendar-check"></i> Последние занятия</h3>
 
@@ -895,6 +1136,54 @@ $stmt = $pdo->prepare("
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl);
         });
+
+        // Функция для раскрытия/скрытия категории
+function toggleCategory(categoryId) {
+    const topicsDiv = document.getElementById('category-' + categoryId);
+    const chevron = document.getElementById('chevron-' + categoryId);
+    
+    if (topicsDiv.style.display === 'none' || topicsDiv.style.display === '') {
+        topicsDiv.style.display = 'block';
+        chevron.style.transform = 'rotate(90deg)';
+    } else {
+        topicsDiv.style.display = 'none';
+        chevron.style.transform = 'rotate(0deg)';
+    }
+}
+
+// Автоматически раскрыть первую категорию при загрузке
+document.addEventListener('DOMContentLoaded', function() {
+    const firstCategory = document.querySelector('[id^="category-"]');
+    const firstChevron = document.querySelector('[id^="chevron-"]');
+    
+    if (firstCategory && firstChevron) {
+        setTimeout(() => {
+            firstCategory.style.display = 'block';
+            firstChevron.style.transform = 'rotate(90deg)';
+        }, 500);
+    }
+});
+
+// Сохраняем состояние раскрытия в localStorage (опционально)
+function saveCategoryState(categoryId, isOpen) {
+    localStorage.setItem('category_' + categoryId, isOpen ? 'open' : 'closed');
+}
+
+function loadCategoryState(categoryId) {
+    return localStorage.getItem('category_' + categoryId) === 'open';
+}
+
+// Обновленная функция с сохранением состояния
+function toggleCategoryWithSave(categoryId) {
+    const topicsDiv = document.getElementById('category-' + categoryId);
+    const chevron = document.getElementById('chevron-' + categoryId);
+    const isOpening = topicsDiv.style.display === 'none' || topicsDiv.style.display === '';
+    
+    topicsDiv.style.display = isOpening ? 'block' : 'none';
+    chevron.style.transform = isOpening ? 'rotate(90deg)' : 'rotate(0deg)';
+    
+    saveCategoryState(categoryId, isOpening);
+}
     </script>
 </body>
 

@@ -69,4 +69,7 @@ function getPublicDiaryUrl($publicLink)
 
     return $protocol . $host . $basePath . '/public_diary.php?token=' . $publicLink;
 }
+
+
+
 ?>
