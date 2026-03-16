@@ -59,7 +59,19 @@ $stmt = $pdo->prepare("
 $stmt->execute([$userId]);
 $students = $stmt->fetchAll();
 
-
+// Получение списка дневников для модального окна переноса
+$diariesList = [];
+if ($userId) {
+    $stmt = $pdo->prepare("
+        SELECT d.*, s.last_name, s.first_name, s.middle_name 
+        FROM diaries d
+        JOIN students s ON d.student_id = s.id
+        WHERE d.user_id = ?
+        ORDER BY s.last_name, s.first_name, d.name
+    ");
+    $stmt->execute([$userId]);
+    $diariesList = $stmt->fetchAll();
+}
 
 // Переключение видимости планирования
 if (isset($_GET['toggle_active']) && $planningId) {
@@ -561,8 +573,140 @@ foreach ($allTopics as $topic) {
     $topicNames[$topic['id']] = $topic['name'];
 }
 
+// Перенос запланированного занятия в дневник
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['move_to_diary'])) {
+    $planningRowId = intval($_POST['planning_row_id'] ?? 0);
+    $planningId = intval($_POST['planning_id'] ?? 0);
+    $diaryId = intval($_POST['diary_id'] ?? 0);
+    $lessonDate = $_POST['lesson_date'] ?? date('Y-m-d');
+    $startTime = $_POST['start_time'] ?? '12:00:00';
+
+    if ($planningRowId && $diaryId) {
+        try {
+            $pdo->beginTransaction();
+
+            // Получаем информацию о запланированном занятии
+            $stmt = $pdo->prepare("
+                SELECT pr.*, p.student_id 
+                FROM planning_rows pr
+                JOIN plannings p ON pr.planning_id = p.id
+                WHERE pr.id = ? AND p.user_id = ?
+            ");
+            $stmt->execute([$planningRowId, $userId]);
+            $planningRow = $stmt->fetch();
+
+            if ($planningRow) {
+                // Получаем информацию о дневнике
+                $stmt = $pdo->prepare("SELECT student_id FROM diaries WHERE id = ? AND user_id = ?");
+                $stmt->execute([$diaryId, $userId]);
+                $diary = $stmt->fetch();
+
+                if ($diary) {
+                    // Проверяем, какие поля есть в таблице lessons
+                    // Получаем структуру таблицы для отладки (можно закомментировать после проверки)
+                    /*
+                    $stmt = $pdo->query("DESCRIBE lessons");
+                    $columns = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                    echo "<pre>Структура таблицы lessons:\n";
+                    print_r($columns);
+                    echo "</pre>";
+                    */
+
+                    // Объединяем topics_text и topics_manual для поля topics_manual в lessons
+                    $topicsText = '';
+                    if (!empty($planningRow['topics_text'])) {
+                        $topicsText = $planningRow['topics_text'];
+                    }
+
+                    // Исправленный запрос - убираем поле notes, используем comment
+                    $stmt = $pdo->prepare("
+                        INSERT INTO lessons (
+                            diary_id, 
+                            student_id, 
+                            lesson_date, 
+                            start_time, 
+                            duration, 
+                            topics_manual, 
+                            homework_manual, 
+                            comment,
+                            is_cancelled, 
+                            is_completed, 
+                            is_paid,
+                            created_at,
+                            updated_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 0, NOW(), NOW())
+                    ");
+
+                    $stmt->execute([
+                        $diaryId,
+                        $diary['student_id'],
+                        $lessonDate,
+                        $startTime,
+                        60, // Длительность по умолчанию
+                        $topicsText,
+                        $planningRow['homework'],
+                        $planningRow['notes'] ?? '', // Примечание сохраняем в поле comment
+                    ]);
+
+                    $newLessonId = $pdo->lastInsertId();
+
+                    // Переносим связанные темы из planning_row_topics
+                    $stmt = $pdo->prepare("
+                        SELECT topic_id FROM planning_row_topics WHERE row_id = ?
+                    ");
+                    $stmt->execute([$planningRowId]);
+                    $topics = $stmt->fetchAll();
+
+                    if (!empty($topics)) {
+                        $insertTopicStmt = $pdo->prepare("
+                            INSERT INTO lesson_topics (lesson_id, topic_id) VALUES (?, ?)
+                        ");
+                        foreach ($topics as $topic) {
+                            $insertTopicStmt->execute([$newLessonId, $topic['topic_id']]);
+                        }
+                    }
+
+                    // Переносим связанные ресурсы из planning_row_resources
+                    $stmt = $pdo->prepare("
+                        SELECT resource_id FROM planning_row_resources WHERE row_id = ?
+                    ");
+                    $stmt->execute([$planningRowId]);
+                    $resources = $stmt->fetchAll();
+
+                    if (!empty($resources)) {
+                        $insertResourceStmt = $pdo->prepare("
+                            INSERT INTO lesson_resources (lesson_id, resource_id) VALUES (?, ?)
+                        ");
+                        foreach ($resources as $resource) {
+                            $insertResourceStmt->execute([$newLessonId, $resource['resource_id']]);
+                        }
+                    }
+
+                    $pdo->commit();
+
+                    $_SESSION['success_message'] = 'Занятие успешно перенесено в дневник';
+                    header('Location: planning.php?action=view&id=' . $planningId . '&message=moved');
+                    exit();
+                } else {
+                    throw new Exception('Дневник не найден');
+                }
+            } else {
+                throw new Exception('Запланированное занятие не найдено');
+            }
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            $error = 'Ошибка при переносе занятия: ' . $e->getMessage();
+        }
+    } else {
+        $error = 'Не выбрано занятие или дневник';
+    }
+}
+
 // Определение текущей вкладки
 $currentTab = $_GET['tab'] ?? 'info';
+
+
+
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -1281,8 +1425,8 @@ $currentTab = $_GET['tab'] ?? 'info';
                                                     <th style="width: 22%">Темы</th>
                                                     <th style="width: 22%">Ресурсы</th>
                                                     <th style="width: 20%">Домашнее задание</th>
-                                                    <th style="width: 13%">Примечание</th>
-                                                    <th style="width: 10%">Действия</th>
+                                                    <th style="width: 10%">Примечание</th>
+                                                    <th style="width: 13%">Действия</th>
                                                 </tr>
                                             </thead>
                                             <tbody id="rowsBody">
@@ -1292,6 +1436,7 @@ $currentTab = $_GET['tab'] ?? 'info';
                                                         $selectedResourceIds = $row['selected_resource_ids'] ? explode(',', $row['selected_resource_ids']) : [];
                                                         ?>
                                                         <tr class="planning-row" data-index="<?php echo $index; ?>">
+
                                                             <td>
                                                                 <input type="number" name="rows[<?php echo $index; ?>][lesson_number]"
                                                                     class="form-control form-control-sm"
@@ -1389,6 +1534,11 @@ $currentTab = $_GET['tab'] ?? 'info';
                                                                     value="<?php echo htmlspecialchars($row['notes']); ?>">
                                                             </td>
                                                             <td>
+                                                                <button type="button" class="btn btn-sm btn-success"
+                                                                    onclick="openMoveToDiaryModal(<?php echo $row['id']; ?>, <?php echo $planningId; ?>)"
+                                                                    title="Перенести в дневник">
+                                                                    <i class="bi bi-calendar-plus"></i>
+                                                                </button>
                                                                 <div class="row-actions">
                                                                     <span class="row-action-btn" title="Вставить сверху"
                                                                         onclick="insertRowBefore(this)">
@@ -1408,6 +1558,7 @@ $currentTab = $_GET['tab'] ?? 'info';
                                                     <?php endforeach; ?>
                                                 <?php else: ?>
                                                     <tr class="planning-row" data-index="0">
+
                                                         <td>
                                                             <input type="number" name="rows[0][lesson_number]"
                                                                 class="form-control form-control-sm" value="1" min="1">
@@ -1448,13 +1599,15 @@ $currentTab = $_GET['tab'] ?? 'info';
                                                             <input type="text" name="rows[0][notes]"
                                                                 class="form-control form-control-sm">
                                                         </td>
+
                                                         <td>
                                                             <div class="row-actions">
-                                                                <span class="row-action-btn" title="Вставить сверху"
+
+                                                                <span class="row-action-btn" title="Вставить сверху2"
                                                                     onclick="insertRowBefore(this)">
                                                                     <i class="bi bi-arrow-up-short"></i>
                                                                 </span>
-                                                                <span class="row-action-btn" title="Вставить снизу"
+                                                                <span class="row-action-btn" title="Вставить снизу2"
                                                                     onclick="insertRowAfter(this)">
                                                                     <i class="bi bi-arrow-down-short"></i>
                                                                 </span>
@@ -1462,6 +1615,8 @@ $currentTab = $_GET['tab'] ?? 'info';
                                                                     onclick="removeRow(this)">
                                                                     <i class="bi bi-x-circle"></i>
                                                                 </span>
+
+
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -1794,7 +1949,7 @@ $currentTab = $_GET['tab'] ?? 'info';
         <?php endif; ?>
     </div>
 
-    <!-- Модальное окно выбора тем -->
+
     <!-- Модальное окно выбора тем -->
     <div class="modal fade" id="topicsModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
@@ -1925,7 +2080,7 @@ $currentTab = $_GET['tab'] ?? 'info';
         </a>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
     <script>
         let currentRowIndex = 0;
         let rowIndex = <?php echo !empty($planningRows) ? count($planningRows) : 1; ?>;
@@ -2398,7 +2553,86 @@ $currentTab = $_GET['tab'] ?? 'info';
             if (resourceSearch) resourceSearch.addEventListener('input', filterResources);
             if (resourceTypeFilter) resourceTypeFilter.addEventListener('change', filterResources);
         });
+
+        function openMoveToDiaryModal(rowId, planningId) {
+            document.getElementById('planning_row_id').value = rowId;
+            document.getElementById('planning_id').value = planningId;
+
+            var modal = new bootstrap.Modal(document.getElementById('moveToDiaryModal'));
+            modal.show();
+        }
+
+        // Добавьте проверку на существование сообщений об успехе
+        <?php if (isset($_SESSION['success_message'])): ?>
+            alert('<?php echo $_SESSION['success_message']; ?>');
+            <?php unset($_SESSION['success_message']); ?>
+        <?php endif; ?>
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Модальное окно для переноса занятия в дневник -->
+    <!-- Модальное окно для переноса занятия в дневник -->
+    <div class="modal fade" id="moveToDiaryModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Перенос занятия в дневник</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" action="" id="moveToDiaryForm">
+                    <div class="modal-body">
+                        <input type="hidden" name="planning_row_id" id="planning_row_id" value="">
+                        <input type="hidden" name="planning_id" id="planning_id" value="">
+
+                        <div class="mb-3">
+                            <label class="form-label">Выберите дневник</label>
+                            <select name="diary_id" id="diary_select" class="form-select" required>
+                                <option value="">-- Выберите дневник --</option>
+                                <?php if (!empty($diariesList)): ?>
+                                    <?php foreach ($diariesList as $diaryItem): ?>
+                                        <option value="<?php echo $diaryItem['id']; ?>">
+                                            <?php
+                                            echo htmlspecialchars(
+                                                $diaryItem['last_name'] . ' ' .
+                                                $diaryItem['first_name'] . ' ' .
+                                                ($diaryItem['middle_name'] ?? '') . ' - ' .
+                                                $diaryItem['name']
+                                            );
+                                            ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <option value="" disabled>Нет доступных дневников</option>
+                                <?php endif; ?>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Дата занятия</label>
+                            <input type="date" name="lesson_date" class="form-control"
+                                value="<?php echo date('Y-m-d'); ?>" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Время начала</label>
+                            <input type="time" name="start_time" class="form-control" value="12:00">
+                        </div>
+
+                        <div class="alert alert-info small" id="preview_info">
+                            <i class="bi bi-info-circle"></i> Будут перенесены: темы, ресурсы, домашнее задание и
+                            примечание
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button type="submit" name="move_to_diary" class="btn btn-success">
+                            <i class="bi bi-calendar-plus"></i> Перенести в дневник
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
 </body>
 
 </html>
