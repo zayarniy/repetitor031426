@@ -107,14 +107,14 @@ if (isset($_GET['confirm_bulk_delete']) && isset($_SESSION['bulk_delete_topics']
                         <?php endforeach; ?>
                     </ul>
                     <p class="text-danger">Эти темы используются в <?php echo $lessonCount; ?> занятиях.</p>
-                    <p class="text-danger">При удалении тем связи с занятиями будут также удалены!</p>
+                    <p class="text-danger">При удалении тем связи с занятиями будут также удалены!<br>Удалять связанные темы нельзя</p>
                     <div class="d-flex justify-content-between">
                         <a href="topics.php" class="btn btn-secondary">Отмена</a>
                         <form method="POST" action="">
                             <?php foreach ($selectedTopics as $topicId): ?>
                                 <input type="hidden" name="selected_topics[]" value="<?php echo $topicId; ?>">
                             <?php endforeach; ?>
-                            <button type="submit" name="force_bulk_delete" class="btn btn-danger">Да, удалить выбранные темы и связи</button>
+                            <!--<button type="submit" name="force_bulk_delete" class="btn btn-danger">Да, удалить выбранные темы и связи</button>-->
                         </form>
                     </div>
                 </div>
@@ -252,10 +252,10 @@ if (isset($_GET['confirm_delete']) && isset($_SESSION['delete_topic_' . $_GET['c
                     </div>
                     <div class="card-body">
                         <p class="lead">Тема "<?php echo htmlspecialchars($topic['name']); ?>" используется в <?php echo $lessonCount; ?> занятиях.</p>
-                        <p class="text-danger">При удалении темы связи с занятиями будут также удалены!</p>
+                        <p class="text-danger">При удалении темы связи с занятиями будут также удалены! Удалять связанные темы нельзя</p>
                         <div class="d-flex justify-content-between">
                             <a href="topics.php" class="btn btn-secondary">Отмена</a>
-                            <a href="?force_delete=<?php echo $deleteId; ?>" class="btn btn-danger">Да, удалить тему и связи</a>
+                            <!--<a href="?force_delete=<?php echo $deleteId; ?>" class="btn btn-danger">Да, удалить тему и связи</a>-->
                         </div>
                     </div>
                 </div>
@@ -1071,23 +1071,37 @@ $noCategoryId = $noCategory ? $noCategory['id'] : null;
             <!-- Заголовок и кнопки действий -->
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2><i class="bi bi-book"></i> Банк тем</h2>
-                <div>
-                    <button type="button" class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#importCsvModal">
-                        <i class="bi bi-upload"></i> Импорт CSV
-                    </button>
-                    <button type="button" class="btn btn-info me-2" data-bs-toggle="modal" data-bs-target="#importJsonModal">
-                        <i class="bi bi-filetype-json"></i> Импорт JSON
-                    </button>
-                    <a href="?export_csv=1" class="btn btn-warning me-2">
-                        <i class="bi bi-filetype-csv"></i> Экспорт CSV
-                    </a>
-                    <a href="?export_json=1" class="btn btn-secondary me-2">
-                        <i class="bi bi-filetype-json"></i> Экспорт JSON
-                    </a>
-                    <a href="?action=add" class="btn btn-primary">
-                        <i class="bi bi-plus-circle"></i> Добавить тему
-                    </a>
-                </div>
+<div class="btn-group">
+    <a href="?action=add" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Добавить тему
+    </a>
+    <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+        <span class="visually-hidden">Toggle Dropdown</span>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end">
+        <li>
+            <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#importCsvModal">
+                <i class="bi bi-upload text-success"></i> Импорт CSV
+            </button>
+        </li>
+        <li>
+            <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#importJsonModal">
+                <i class="bi bi-filetype-json text-info"></i> Импорт JSON
+            </button>
+        </li>
+        <li><hr class="dropdown-divider"></li>
+        <li>
+            <a class="dropdown-item" href="?export_csv=1">
+                <i class="bi bi-filetype-csv text-warning"></i> Экспорт CSV
+            </a>
+        </li>
+        <li>
+            <a class="dropdown-item" href="?export_json=1">
+                <i class="bi bi-filetype-json text-secondary"></i> Экспорт JSON
+            </a>
+        </li>
+    </ul>
+</div>
             </div>
             
             <!-- Статистика -->

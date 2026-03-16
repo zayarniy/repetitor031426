@@ -374,21 +374,31 @@ if ($action === 'edit' && $categoryId) {
         <?php endif; ?>
         
         <?php if ($action === 'list'): ?>
-            <!-- Заголовок и кнопки действий -->
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2><i class="bi bi-tags"></i> Банк категорий</h2>
-                <div>
-                    <button type="button" class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#importModal">
-                        <i class="bi bi-upload"></i> Импорт CSV
-                    </button>
-                    <a href="?export_csv=1" class="btn btn-info me-2">
-                        <i class="bi bi-download"></i> Экспорт CSV
-                    </a>
-                    <a href="?action=add" class="btn btn-primary">
-                        <i class="bi bi-plus-circle"></i> Добавить категорию
-                    </a>
-                </div>
-            </div>
+<!-- Заголовок и кнопки действий -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-tags"></i> Банк категорий</h2>
+    
+    <div class="btn-group">
+        <a href="?action=add" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Добавить категорию
+        </a>
+        <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+            <span class="visually-hidden">Toggle Dropdown</span>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+            <li>
+                <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#importModal">
+                    <i class="bi bi-upload text-success"></i> Импорт CSV
+                </button>
+            </li>
+            <li>
+                <a class="dropdown-item" href="?export_csv=1">
+                    <i class="bi bi-download text-info"></i> Экспорт CSV
+                </a>
+            </li>
+        </ul>
+    </div>
+</div>
             
             <!-- Статистика -->
             <div class="stats-section mb-4">
