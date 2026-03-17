@@ -1175,8 +1175,11 @@ if ($publicView) {
                             <?php echo $diary['lessons_count']; ?> занятий
                         </span>
                     </div>
-                    
+
                     <div class="mt-3 d-flex justify-content-end gap-2">
+<a href="private_diary.php?id=<?php echo $diary['id']; ?>" class="btn btn-sm btn-outline-primary" title="Детальный просмотр">
+    <i class="bi bi-info-circle"></i>
+</a>
                                 <a href="lessons.php?diary_id=<?php echo $diary['id']; ?>" class="btn btn-sm btn-outline-success" title="Перейти к занятиям">
             <i class="bi bi-calendar-check"></i>
         </a>

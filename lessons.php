@@ -1509,7 +1509,7 @@ if (isset($_GET['delete']) && $lessonId) {
                         // Получаем домашнее задание
                         $homework = !empty($lesson['homework_manual']) ? $lesson['homework_manual'] : '';
                         ?>
-                        <div class="lesson-card <?php echo $statusClass; ?>">
+                        <div class="lesson-card <?php echo $statusClass; ?>" onclick="window.location.href='?action=edit&id=<?php echo $lesson['id']; ?>&diary_id=<?php echo $diaryId; ?>'" >
                             <div class="row">
                                 <div class="col-md-2">
                                     <div class="lesson-date">
