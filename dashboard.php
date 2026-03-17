@@ -423,6 +423,8 @@ foreach ($schedule as $lesson) {
                 text-overflow: ellipsis;
             }
         }
+
+        
     </style>
 </head>
 <body>
@@ -597,95 +599,135 @@ foreach ($schedule as $lesson) {
             </form>
         </div>
         
-        <!-- Расписание на выбранную неделю -->
-        <div class="row">
-            <div class="col-12">
-                <h3 class="mb-3">
-                    <i class="bi bi-calendar-range"></i> 
-                    Расписание на неделю: <?php echo $weekStartDisplay; ?> - <?php echo $weekEndDisplay; ?>
-                    <?php if ($weekOffset != 0): ?>
-                        <small class="text-muted">(<?php echo $weekOffset > 0 ? '+' . $weekOffset : $weekOffset; ?> неделя)</small>
-                    <?php endif; ?>
-                </h3>
+       <!-- Расписание на выбранную неделю -->
+<div class="row">
+    <div class="col-12">
+        <h3 class="mb-3">
+            <i class="bi bi-calendar-range"></i> 
+            Расписание на неделю: <?php echo $weekStartDisplay; ?> - <?php echo $weekEndDisplay; ?>
+            <?php if ($weekOffset != 0): ?>
+                <small class="text-muted">(<?php echo $weekOffset > 0 ? '+' . $weekOffset : $weekOffset; ?> неделя)</small>
+            <?php endif; ?>
+        </h3>
+    </div>
+</div>
+
+<div class="row">
+    <?php
+    $days = [
+        'monday' => 'Понедельник',
+        'tuesday' => 'Вторник',
+        'wednesday' => 'Среда',
+        'thursday' => 'Четверг',
+        'friday' => 'Пятница',
+        'saturday' => 'Суббота',
+        'sunday' => 'Воскресенье'
+    ];
+    
+    foreach ($days as $dayKey => $dayName):
+        $date = date('d.m', strtotime("{$dayKey} this week", strtotime($weekStart)));
+    ?>
+    <div class="col-md-6 col-lg-4">
+        <div class="schedule-day">
+            <h4><?php echo $dayName; ?> <small class="text-muted"><?php echo $date; ?></small></h4>
+            <?php if (empty($daysOfWeek[$dayKey])): ?>
+                <p class="text-muted text-center py-3">Нет занятий</p>
+            <?php else: ?>
+                <?php foreach ($daysOfWeek[$dayKey] as $lesson): 
+                    $lessonClass = '';
+                    if ($lesson['is_completed']) $lessonClass = 'completed';
+                    elseif ($lesson['is_cancelled']) $lessonClass = 'cancelled';
+                    
+                    // Получаем категории тем для этого занятия
+                    $topicCategories = [];
+                    if (!empty($lesson['topics_with_ids'])) {
+                        $topicItems = explode(',', $lesson['topics_with_ids']);
+                        $categoryStmt = $pdo->prepare("
+                            SELECT DISTINCT c.name, c.color 
+                            FROM lesson_topics lt
+                            JOIN topics t ON lt.topic_id = t.id
+                            LEFT JOIN categories c ON t.category_id = c.id
+                            WHERE lt.lesson_id = ?
+                        ");
+                        $categoryStmt->execute([$lesson['id']]);
+                        $categories = $categoryStmt->fetchAll();
+                        
+                        foreach ($categories as $cat) {
+                            if (!empty($cat['name'])) {
+                                $topicCategories[] = [
+                                    'name' => $cat['name'],
+                                    'color' => $cat['color'] ?? '#808080'
+                                ];
+                            }
+                        }
+                    }
+                    
+                    // Убираем дубликаты категорий
+                    $topicCategories = array_unique($topicCategories, SORT_REGULAR);
+                ?>
+                    <div class="lesson-item <?php echo $lessonClass; ?>" 
+     onclick="window.location.href='lessons.php?action=edit&id=<?php echo $lesson['id']; ?>&diary_id=<?php echo $lesson['diary_id']; ?>'">
+    
+    <!-- Основное содержимое карточки -->
+    <div class="d-flex justify-content-between align-items-start">
+        <div>
+            <div class="lesson-time">
+                <?php echo date('H:i', strtotime($lesson['start_time'])); ?> 
+                (<?php echo floor($lesson['duration'] / 60) . 'ч ' . ($lesson['duration'] % 60) . 'м'; ?>)
+            </div>
+            <div class="lesson-student">
+                <?php echo htmlspecialchars($lesson['last_name'] . ' ' . $lesson['first_name']); ?>
+            </div>
+            
+            <!-- Отображение категорий тем -->
+            <?php if (!empty($topicCategories)): ?>
+                <div class="lesson-categories mt-1">
+                    <?php foreach ($topicCategories as $category): ?>
+                        <span class="category-badge" style="background-color: <?php echo $category['color']; ?>20; border-left: 3px solid <?php echo $category['color']; ?>;">
+                            <?php echo htmlspecialchars($category['name']); ?>
+                        </span>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+            
+            <div class="lesson-diary">
+                <?php echo htmlspecialchars($lesson['diary_name']); ?>
             </div>
         </div>
+        <?php if ($lesson['is_paid']): ?>
+            <span class="badge bg-success">Оплачено</span>
+        <?php endif; ?>
+    </div>
+    
+    <!-- Всплывающее окно с темами -->
+    <div class="lesson-tooltip">
+        <strong>Темы занятия:</strong>
+        <?php 
+        $topics = explode(',', $lesson['topics'] ?? '');
+        if (!empty($topics[0])):
+            foreach ($topics as $topic):
+        ?>
+            <div>• <?php echo htmlspecialchars(trim($topic)); ?></div>
+        <?php 
+            endforeach;
+        else:
+        ?>
+            <div class="text-muted">Нет тем</div>
+        <?php endif; ?>
         
-        <div class="row">
-            <?php
-            $days = [
-                'monday' => 'Понедельник',
-                'tuesday' => 'Вторник',
-                'wednesday' => 'Среда',
-                'thursday' => 'Четверг',
-                'friday' => 'Пятница',
-                'saturday' => 'Суббота',
-                'sunday' => 'Воскресенье'
-            ];
-            
-            foreach ($days as $dayKey => $dayName):
-                $date = date('d.m', strtotime("{$dayKey} this week", strtotime($weekStart)));
-            ?>
-            <div class="col-md-6 col-lg-4">
-                <div class="schedule-day">
-                    <h4><?php echo $dayName; ?> <small class="text-muted"><?php echo $date; ?></small></h4>
-                    <?php if (empty($daysOfWeek[$dayKey])): ?>
-                        <p class="text-muted text-center py-3">Нет занятий</p>
-                    <?php else: ?>
-                        <?php foreach ($daysOfWeek[$dayKey] as $lesson): 
-                            $lessonClass = '';
-                            if ($lesson['is_completed']) $lessonClass = 'completed';
-                            elseif ($lesson['is_cancelled']) $lessonClass = 'cancelled';
-                        ?>
-                            <div class="lesson-item <?php echo $lessonClass; ?>" 
-                                 onclick="window.location.href='lessons.php?action=edit&id=<?php echo $lesson['id']; ?>&diary_id=<?php echo $lesson['diary_id']; ?>'">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <div class="lesson-time">
-                                            <?php echo date('H:i', strtotime($lesson['start_time'])); ?> 
-                                            (<?php echo floor($lesson['duration'] / 60) . 'ч ' . ($lesson['duration'] % 60) . 'м'; ?>)
-                                        </div>
-                                        <div class="lesson-student">
-                                            <?php echo htmlspecialchars($lesson['last_name'] . ' ' . $lesson['first_name']); ?>
-                                        </div>
-                                        <div class="lesson-diary">
-                                            <?php echo htmlspecialchars($lesson['diary_name']); ?>
-                                        </div>
-                                    </div>
-                                    <?php if ($lesson['is_paid']): ?>
-                                        <span class="badge bg-success">Оплачено</span>
-                                    <?php endif; ?>
-                                </div>
-                                
-                                <!-- Подсказка при наведении -->
-                                <div class="lesson-tooltip">
-                                    <strong>Темы:</strong>
-                                    <?php 
-                                    $topics = explode(',', $lesson['topics'] ?? '');
-                                    if (!empty($topics[0])):
-                                        foreach ($topics as $topic):
-                                    ?>
-                                        <div>• <?php echo htmlspecialchars(trim($topic)); ?></div>
-                                    <?php 
-                                        endforeach;
-                                    else:
-                                    ?>
-                                        <div class="text-muted">Нет тем</div>
-                                    <?php endif; ?>
-                                    
-                                    <?php if (!empty($lesson['comment'])): ?>
-                                        <hr class="my-1">
-                                        <strong>Комментарий:</strong>
-                                        <div><?php echo nl2br(htmlspecialchars($lesson['comment'])); ?></div>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </div>
-            </div>
-            <?php endforeach; ?>
+        <?php if (!empty($lesson['comment'])): ?>
+            <hr>
+            <strong>Комментарий:</strong>
+            <div><?php echo nl2br(htmlspecialchars($lesson['comment'])); ?></div>
+        <?php endif; ?>
+    </div>
+</div>
+                <?php endforeach; ?>
+            <?php endif; ?>
         </div>
     </div>
+    <?php endforeach; ?>
+</div>
     
     <!-- Модальное окно выбора недели -->
     <div class="modal fade" id="weekPickerModal" tabindex="-1">
