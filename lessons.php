@@ -1079,10 +1079,11 @@ if (isset($_GET['delete']) && $lessonId) {
                                         <i class="bi bi-link-45deg"></i> Удалить ссылку
                                     </a>
                                 <?php else: ?>
+                                    <!--
                                     <a href="?generate_link=1&id=<?php echo $lessonId; ?>&diary_id=<?php echo $diaryId; ?>"
                                         class="btn btn-sm btn-outline-success me-2">
                                         <i class="bi bi-link-45deg"></i> Создать ссылку
-                                    </a>
+                                    </a>-->
                                 <?php endif; ?>
                             <?php endif; ?>
                             <a href="lessons.php?diary_id=<?php echo $diaryId; ?>" class="btn btn-outline-secondary">

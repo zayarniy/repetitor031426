@@ -1142,7 +1142,7 @@ if ($publicView) {
                         ?>
                             <?php echo htmlspecialchars($student['last_name'] . ' ' . $student['first_name'] . ' ' . ($student['middle_name'] ?? '')); ?>
                             <?php if ($student['class']): ?>
-                                <small class="text-muted">(<?php echo htmlspecialchars($student['class']); ?> класс)</small>
+                                <small class="text-muted">(<?php echo htmlspecialchars($student['class']); ?> )</small>
                             <?php endif; ?>
                         <?php else: ?>
                             <span class="text-muted">Ученик не найден</span>
@@ -1236,7 +1236,7 @@ if ($publicView) {
                                         <?php echo ($editDiary && $editDiary['student_id'] == $student['id']) ? 'selected' : ''; ?>>
                                         <?php echo htmlspecialchars($student['last_name'] . ' ' . $student['first_name'] . ' ' . ($student['middle_name'] ?? '')); ?>
                                         <?php if ($student['class']): ?>
-                                            (<?php echo htmlspecialchars($student['class']); ?> класс)
+                                            (<?php echo htmlspecialchars($student['class']); ?>)
                                         <?php endif; ?>
                                     </option>
                                 <?php endforeach; ?>
@@ -1408,7 +1408,7 @@ if ($publicView) {
                                     <p><strong>Ученик:</strong> 
                                         <?php echo htmlspecialchars($editDiary['last_name'] . ' ' . $editDiary['first_name'] . ' ' . ($editDiary['middle_name'] ?? '')); ?>
                                         <?php if ($editDiary['class']): ?>
-                                            <span class="badge bg-secondary"><?php echo htmlspecialchars($editDiary['class']); ?> класс</span>
+                                            <span class="badge bg-secondary"><?php echo htmlspecialchars($editDiary['class']); ?></span>
                                         <?php endif; ?>
                                     </p>
                                     <p><strong>Категория:</strong> 
