@@ -815,13 +815,13 @@ if (isset($_GET['export_json'])) {
                             <div class="col-md-3">
                                 <?php if (!empty($lesson['topic_names'])): ?>
                                     <small class="text-muted">Темы:</small>
-                                    <div><?php echo htmlspecialchars(substr($lesson['topic_names'], 0, 50)) . (strlen($lesson['topic_names']) > 50 ? '...' : ''); ?></div>
+                                    <div><?php echo htmlspecialchars(substr($lesson['topic_names'], 0, 250)) . (strlen($lesson['topic_names']) > 250 ? '...' : ''); ?></div>
                                 <?php endif; ?>
                             </div>
                             <div class="col-md-3">
                                 <?php if (!empty($lesson['homework_manual'])): ?>
                                     <small class="text-muted">ДЗ:</small>
-                                    <div><?php echo htmlspecialchars(substr($lesson['homework_manual'], 0, 50)) . (strlen($lesson['homework_manual']) > 50 ? '...' : ''); ?></div>
+                                    <div><?php echo htmlspecialchars(substr($lesson['homework_manual'], 0, 250)) . (strlen($lesson['homework_manual']) > 250 ? '...' : ''); ?></div>
                                 <?php endif; ?>
                             </div>
                             <div class="col-md-2">

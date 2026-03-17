@@ -553,7 +553,7 @@ $currentTab = $_GET['tab'] ?? 'main';
                                         </div>
                                         <?php if (!empty($student['class'])): ?>
                                             <span class="student-class mt-2">
-                                                <i class="bi bi-backpack"></i> <?php echo htmlspecialchars($student['class']); ?> класс
+                                                <i class="bi bi-backpack"></i> <?php echo htmlspecialchars($student['class']); ?>
                                             </span>
                                         <?php endif; ?>
                                     </div>
