@@ -129,8 +129,7 @@ $stmt = $pdo->prepare("
     LEFT JOIN topics t ON lt.topic_id = t.id
     WHERE l.diary_id = ?
     GROUP BY l.id
-    ORDER BY l.lesson_date DESC, l.start_time DESC
-    LIMIT 10
+    ORDER BY l.lesson_date DESC, l.start_time DESC    
 ");
 $stmt->execute([$diaryId]);
 $recentLessons = $stmt->fetchAll();

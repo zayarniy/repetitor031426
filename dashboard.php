@@ -627,7 +627,7 @@ foreach ($schedule as $lesson) {
     foreach ($days as $dayKey => $dayName):
         $date = date('d.m', strtotime("{$dayKey} this week", strtotime($weekStart)));
     ?>
-    <div class="col-md-6 col-lg-4">
+        <div class="col-md-6 col-lg-4">
         <div class="schedule-day">
             <h4><?php echo $dayName; ?> <small class="text-muted"><?php echo $date; ?></small></h4>
             <?php if (empty($daysOfWeek[$dayKey])): ?>
@@ -638,10 +638,15 @@ foreach ($schedule as $lesson) {
                     if ($lesson['is_completed']) $lessonClass = 'completed';
                     elseif ($lesson['is_cancelled']) $lessonClass = 'cancelled';
                     
+                    // Получаем информацию о дневнике для проверки наличия публичной ссылки
+                    $diaryInfoStmt = $pdo->prepare("SELECT public_link FROM diaries WHERE id = ?");
+                    $diaryInfoStmt->execute([$lesson['diary_id']]);
+                    $diaryInfo = $diaryInfoStmt->fetch();
+                    $hasPublicLink = !empty($diaryInfo['public_link']);
+                    
                     // Получаем категории тем для этого занятия
                     $topicCategories = [];
                     if (!empty($lesson['topics_with_ids'])) {
-                        $topicItems = explode(',', $lesson['topics_with_ids']);
                         $categoryStmt = $pdo->prepare("
                             SELECT DISTINCT c.name, c.color 
                             FROM lesson_topics lt
@@ -666,62 +671,87 @@ foreach ($schedule as $lesson) {
                     $topicCategories = array_unique($topicCategories, SORT_REGULAR);
                 ?>
                     <div class="lesson-item <?php echo $lessonClass; ?>" 
-     onclick="window.location.href='lessons.php?action=edit&id=<?php echo $lesson['id']; ?>&diary_id=<?php echo $lesson['diary_id']; ?>'">
-    
-    <!-- Основное содержимое карточки -->
-    <div class="d-flex justify-content-between align-items-start">
-        <div>
-            <div class="lesson-time">
-                <?php echo date('H:i', strtotime($lesson['start_time'])); ?> 
-                (<?php echo floor($lesson['duration'] / 60) . 'ч ' . ($lesson['duration'] % 60) . 'м'; ?>)
-            </div>
-            <div class="lesson-student">
-                <?php echo htmlspecialchars($lesson['last_name'] . ' ' . $lesson['first_name']); ?>
-            </div>
-            
-            <!-- Отображение категорий тем -->
-            <?php if (!empty($topicCategories)): ?>
-                <div class="lesson-categories mt-1">
-                    <?php foreach ($topicCategories as $category): ?>
-                        <span class="category-badge" style="background-color: <?php echo $category['color']; ?>20; border-left: 3px solid <?php echo $category['color']; ?>;">
-                            <?php echo htmlspecialchars($category['name']); ?>
-                        </span>
-                    <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
-            
-            <div class="lesson-diary">
-                <?php echo htmlspecialchars($lesson['diary_name']); ?>
-            </div>
-        </div>
-        <?php if ($lesson['is_paid']): ?>
-            <span class="badge bg-success">Оплачено</span>
-        <?php endif; ?>
-    </div>
-    
-    <!-- Всплывающее окно с темами -->
-    <div class="lesson-tooltip">
-        <strong>Темы занятия:</strong>
-        <?php 
-        $topics = explode(',', $lesson['topics'] ?? '');
-        if (!empty($topics[0])):
-            foreach ($topics as $topic):
-        ?>
-            <div>• <?php echo htmlspecialchars(trim($topic)); ?></div>
-        <?php 
-            endforeach;
-        else:
-        ?>
-            <div class="text-muted">Нет тем</div>
-        <?php endif; ?>
-        
-        <?php if (!empty($lesson['comment'])): ?>
-            <hr>
-            <strong>Комментарий:</strong>
-            <div><?php echo nl2br(htmlspecialchars($lesson['comment'])); ?></div>
-        <?php endif; ?>
-    </div>
-</div>
+                         onclick="window.location.href='lessons.php?action=edit&id=<?php echo $lesson['id']; ?>&diary_id=<?php echo $lesson['diary_id']; ?>'">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div style="flex: 1;">
+                                <div class="lesson-time">
+                                    <?php echo date('H:i', strtotime($lesson['start_time'])); ?> 
+                                    (<?php echo floor($lesson['duration'] / 60) . 'ч ' . ($lesson['duration'] % 60) . 'м'; ?>)
+                                </div>
+                                <div class="lesson-student">
+                                    <?php echo htmlspecialchars($lesson['last_name'] . ' ' . $lesson['first_name']); ?>
+                                </div>
+                                
+                                <!-- Отображение категорий тем -->
+                                <?php if (!empty($topicCategories)): ?>
+                                    <div class="lesson-categories mt-1">
+                                        <?php foreach ($topicCategories as $category): ?>
+                                            <span class="category-badge" style="background-color: <?php echo $category['color']; ?>20; border-left: 3px solid <?php echo $category['color']; ?>; padding: 2px 8px; margin-right: 4px; margin-bottom: 2px; display: inline-block; border-radius: 12px; font-size: 0.7rem;">
+                                                <?php echo htmlspecialchars($category['name']); ?>
+                                            </span>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php endif; ?>
+                                
+                                <div class="lesson-diary">
+                                    <?php echo htmlspecialchars($lesson['diary_name']); ?>
+                                </div>
+                            </div>
+                            
+                            <!-- Кнопки действий -->
+                            <div class="lesson-actions d-flex flex-column gap-1" onclick="event.stopPropagation()">
+                                <a href="lessons.php?diary_id=<?php echo $lesson['diary_id']; ?>" 
+                                   class="btn btn-sm btn-outline-primary p-1" 
+                                   style="width: 30px; height: 30px;"
+                                   data-bs-toggle="tooltip" 
+                                   title="Перейти к занятиям дневника">
+                                    <i class="bi bi-calendar-check"></i>
+                                </a>
+                                
+                                <a href="private_diary.php?id=<?php echo $lesson['diary_id']; ?>" 
+                                   class="btn btn-sm btn-outline-info p-1" 
+                                   style="width: 30px; height: 30px;"
+                                   data-bs-toggle="tooltip" 
+                                   title="Детальная информация о дневнике">
+                                    <i class="bi bi-info-circle"></i>
+                                </a>
+                                
+                                <?php if ($hasPublicLink): ?>
+                                    <a href="public_diary.php?token=<?php echo $diaryInfo['public_link']; ?>" 
+                                       target="_blank"
+                                       class="btn btn-sm btn-outline-success p-1" 
+                                       style="width: 30px; height: 30px;"
+                                       data-bs-toggle="tooltip" 
+                                       title="Публичная версия дневника">
+                                        <i class="bi bi-link"></i>
+                                    </a>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        
+                        <!-- Подсказка при наведении -->
+                        <div class="lesson-tooltip">
+                            <strong>Темы:</strong>
+                            <?php 
+                            $topics = explode(',', $lesson['topics'] ?? '');
+                            if (!empty($topics[0])):
+                                foreach ($topics as $topic):
+                            ?>
+                                <div>• <?php echo htmlspecialchars(trim($topic)); ?></div>
+                            <?php 
+                                endforeach;
+                            else:
+                            ?>
+                                <div class="text-muted">Нет тем</div>
+                            <?php endif; ?>
+                            
+                            <?php if (!empty($lesson['comment'])): ?>
+                                <hr class="my-1">
+                                <strong>Комментарий:</strong>
+                                <div><?php echo nl2br(htmlspecialchars($lesson['comment'])); ?></div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
                 <?php endforeach; ?>
             <?php endif; ?>
         </div>

@@ -711,7 +711,7 @@ function getNumEnding($number, $titles) {
                     <?php
                     echo htmlspecialchars($diary['student_last_name'] . ' ' . $diary['student_first_name'] . ' ' . ($diary['student_middle_name'] ?? ''));
                     if ($diary['student_class']):
-                        echo ' (' . htmlspecialchars($diary['student_class']) . ' класс)';
+                        echo ' (' . htmlspecialchars($diary['student_class']) . ')';
                     endif;
                     ?>
                 </div>
