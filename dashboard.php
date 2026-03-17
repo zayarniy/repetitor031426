@@ -263,20 +263,24 @@ foreach ($schedule as $lesson) {
             padding-bottom: 10px;
             margin-bottom: 15px;
         }
-        .lesson-item {
-            background: #f8f9fa;
-            border-left: 4px solid #667eea;
-            border-radius: 8px;
-            padding: 12px 15px;
-            margin-bottom: 10px;
-            cursor: pointer;
-            transition: all 0.3s;
-            position: relative;
-        }
-        .lesson-item:hover {
-            background: #e9ecef;
-            transform: translateX(5px);
-        }
+.lesson-item {
+    background: #f8f9fa;
+    border-left: 4px solid #667eea;
+    border-radius: 8px;
+    padding: 12px 15px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative; /* Важно для позиционирования тултипа */
+    z-index: 1; /* Базовый z-index */
+}
+/* При наведении увеличиваем z-index, чтобы тултип не перекрывался */
+.lesson-item:hover {
+    z-index: 1000;
+    background: #e9ecef;
+    transform: translateX(5px);
+}
+
         .lesson-item.completed {
             border-left-color: #28a745;
             background: #f0fff4;
@@ -297,17 +301,37 @@ foreach ($schedule as $lesson) {
             font-size: 0.85em;
             color: #666;
         }
-        .lesson-tooltip {
-            display: none;
-            position: absolute;
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 10px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-            z-index: 1000;
-            max-width: 300px;
-        }
+.lesson-tooltip {
+    display: none;
+    position: absolute;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 10px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+    z-index: 9999; /* Увеличиваем z-index */
+    max-width: 300px;
+    min-width: 200px;
+    pointer-events: none; /* Чтобы мышь не взаимодействовала с тултипом */
+    top: 100%; /* Позиционируем снизу от родителя */
+    left: 0;
+    margin-top: 5px;
+}
+
+.lesson-tooltip::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: 20px;
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-bottom: 8px solid white;
+    filter: drop-shadow(0 -2px 2px rgba(0,0,0,0.1));
+}
+
+
         .lesson-item:hover .lesson-tooltip {
             display: block;
             top: 100%;
