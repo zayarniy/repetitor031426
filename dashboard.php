@@ -423,7 +423,222 @@ foreach ($schedule as $lesson) {
                 text-overflow: ellipsis;
             }
         }
+/* Стили для плашки оплачено */
+.paid-badge {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    box-shadow: 0 2px 5px rgba(40, 167, 69, 0.3);
+    animation: pulse 2s infinite;
+}
 
+.paid-badge i {
+    font-size: 0.8rem;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 2px 5px rgba(40, 167, 69, 0.3);
+    }
+    50% {
+        box-shadow: 0 2px 10px rgba(40, 167, 69, 0.5);
+    }
+    100% {
+        box-shadow: 0 2px 5px rgba(40, 167, 69, 0.3);
+    }
+}
+
+/* Обновленные стили для верхней строки */
+.lesson-time {
+    font-weight: bold;
+    color: #667eea;
+    font-size: 1rem;
+}
+
+.lesson-duration {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.lesson-duration i {
+    margin-right: 2px;
+}
+
+/* Остальные стили остаются без изменений */
+.lesson-item {
+    background: #f8f9fa;
+    border-left: 4px solid #667eea;
+    border-radius: 8px;
+    padding: 12px 15px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+    z-index: 1;
+}
+
+.lesson-item:hover {
+    z-index: 1000;
+    background: #e9ecef;
+    transform: translateX(5px);
+}
+
+.lesson-item.completed {
+    border-left-color: #28a745;
+    background: #f0fff4;
+}
+
+.lesson-item.cancelled {
+    border-left-color: #dc3545;
+    background: #fff5f5;
+    opacity: 0.7;
+}
+
+.lesson-student {
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.lesson-diary {
+    font-size: 0.8rem;
+    color: #666;
+    margin-top: 2px;
+}
+
+/* Стили для кнопок действий */
+.lesson-actions {
+    margin-left: 10px;
+    min-width: 30px;
+}
+
+.lesson-actions .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.2s;
+    font-size: 0.8rem;
+    padding: 0;
+}
+
+.lesson-actions .btn:hover {
+    transform: scale(1.1);
+}
+
+.lesson-actions .btn-outline-primary:hover {
+    background-color: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
+.lesson-actions .btn-outline-info:hover {
+    background-color: #17a2b8;
+    color: white;
+    border-color: #17a2b8;
+}
+
+.lesson-actions .btn-outline-success:hover {
+    background-color: #28a745;
+    color: white;
+    border-color: #28a745;
+}
+
+/* Стили для категорий */
+.lesson-categories {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    margin-top: 4px;
+}
+
+.category-badge {
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 12px;
+    background-color: #f0f0f0;
+    border-left: 3px solid;
+    display: inline-block;
+    margin-right: 4px;
+    margin-bottom: 2px;
+    transition: all 0.2s;
+}
+
+.category-badge:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Стили для тултипа */
+.lesson-tooltip {
+    display: none;
+    position: absolute;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 10px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+    z-index: 9999;
+    max-width: 300px;
+    min-width: 200px;
+    pointer-events: none;
+    top: 100%;
+    left: 0;
+    margin-top: 5px;
+}
+
+.lesson-tooltip::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: 20px;
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-bottom: 8px solid white;
+    filter: drop-shadow(0 -2px 2px rgba(0,0,0,0.1));
+}
+
+.lesson-item:hover .lesson-tooltip {
+    display: block;
+}
+
+/* Адаптивность для мобильных */
+@media (max-width: 768px) {
+    .lesson-item .d-flex {
+        flex-direction: column;
+    }
+    
+    .lesson-actions {
+        flex-direction: row !important;
+        margin-left: 0;
+        margin-top: 10px;
+        width: 100%;
+        justify-content: flex-end;
+    }
+    
+    .lesson-actions .btn {
+        width: 36px !important;
+        height: 36px !important;
+    }
+    
+    .lesson-tooltip {
+        max-width: 250px;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    
+    .lesson-tooltip::before {
+        left: 50%;
+        transform: translateX(-50%);
+    }
+}
         
     </style>
 </head>
@@ -599,7 +814,7 @@ foreach ($schedule as $lesson) {
             </form>
         </div>
         
-       <!-- Расписание на выбранную неделю -->
+<!-- Расписание на выбранную неделю -->
 <div class="row">
     <div class="col-12">
         <h3 class="mb-3">
@@ -627,7 +842,7 @@ foreach ($schedule as $lesson) {
     foreach ($days as $dayKey => $dayName):
         $date = date('d.m', strtotime("{$dayKey} this week", strtotime($weekStart)));
     ?>
-        <div class="col-md-6 col-lg-4">
+    <div class="col-md-6 col-lg-4">
         <div class="schedule-day">
             <h4><?php echo $dayName; ?> <small class="text-muted"><?php echo $date; ?></small></h4>
             <?php if (empty($daysOfWeek[$dayKey])): ?>
@@ -672,12 +887,29 @@ foreach ($schedule as $lesson) {
                 ?>
                     <div class="lesson-item <?php echo $lessonClass; ?>" 
                          onclick="window.location.href='lessons.php?action=edit&id=<?php echo $lesson['id']; ?>&diary_id=<?php echo $lesson['diary_id']; ?>'">
+                        
+                        <!-- Верхняя строка с датой, временем и статусом оплаты -->
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="lesson-time">
+                                    <?php echo date('H:i', strtotime($lesson['start_time'])); ?>
+                                </span>
+                                <span class="lesson-duration text-muted">
+                                    <i class="bi bi-clock"></i> <?php echo floor($lesson['duration'] / 60) . 'ч ' . ($lesson['duration'] % 60) . 'м'; ?>
+                                </span>
+                            </div>
+                            
+                            <!-- Плашка оплачено -->
+                            <?php if ($lesson['is_paid']): ?>
+                                <span class="paid-badge">
+                                    <i class="bi bi-currency-dollar"></i>
+                                </span>
+                            <?php endif; ?>                        
+                        </div>
+                        
+                        <!-- Основная информация -->
                         <div class="d-flex justify-content-between align-items-start">
                             <div style="flex: 1;">
-                                <div class="lesson-time">
-                                    <?php echo date('H:i', strtotime($lesson['start_time'])); ?> 
-                                    (<?php echo floor($lesson['duration'] / 60) . 'ч ' . ($lesson['duration'] % 60) . 'м'; ?>)
-                                </div>
                                 <div class="lesson-student">
                                     <?php echo htmlspecialchars($lesson['last_name'] . ' ' . $lesson['first_name']); ?>
                                 </div>
@@ -749,6 +981,12 @@ foreach ($schedule as $lesson) {
                                 <hr class="my-1">
                                 <strong>Комментарий:</strong>
                                 <div><?php echo nl2br(htmlspecialchars($lesson['comment'])); ?></div>
+                            <?php endif; ?>
+                            
+                            <?php if (!empty($lesson['cost'])): ?>
+                                <hr class="my-1">
+                                <strong>Стоимость:</strong>
+                                <div><?php echo number_format($lesson['cost'], 0, ',', ' '); ?> ₽</div>
                             <?php endif; ?>
                         </div>
                     </div>

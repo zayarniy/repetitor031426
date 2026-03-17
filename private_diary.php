@@ -158,12 +158,12 @@ if ($totalMinutes > 0 || $totalHours == 0) {
 if (isset($_GET['export_csv'])) {
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename="diary_' . $diaryId . '_' . date('Y-m-d') . '.csv"');
-    
+
     $output = fopen('php://output', 'w');
-    
+
     // Заголовки
     fputcsv($output, ['Дата', 'Время', 'Длительность', 'Темы', 'ДЗ', 'Оценка', 'Оплата', 'Комментарий']);
-    
+
     // Данные
     foreach ($recentLessons as $lesson) {
         fputcsv($output, [
@@ -177,7 +177,7 @@ if (isset($_GET['export_csv'])) {
             $lesson['comment']
         ]);
     }
-    
+
     fclose($output);
     exit();
 }
@@ -193,7 +193,7 @@ if (isset($_GET['export_json'])) {
         'parents' => $parents,
         'export_date' => date('Y-m-d H:i:s')
     ];
-    
+
     header('Content-Type: application/json');
     header('Content-Disposition: attachment; filename="diary_' . $diaryId . '_' . date('Y-m-d') . '.json"');
     echo json_encode($exportData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
@@ -202,6 +202,7 @@ if (isset($_GET['export_json'])) {
 ?>
 <!DOCTYPE html>
 <html lang="ru">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -213,7 +214,7 @@ if (isset($_GET['export_json'])) {
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
             min-height: 100vh;
         }
-        
+
         .diary-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -223,7 +224,7 @@ if (isset($_GET['export_json'])) {
             box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
             position: relative;
         }
-        
+
         .action-buttons {
             position: absolute;
             top: 20px;
@@ -231,7 +232,7 @@ if (isset($_GET['export_json'])) {
             display: flex;
             gap: 10px;
         }
-        
+
         .action-btn {
             width: 40px;
             height: 40px;
@@ -246,50 +247,50 @@ if (isset($_GET['export_json'])) {
             cursor: pointer;
             text-decoration: none;
         }
-        
+
         .action-btn:hover {
             background: rgba(255, 255, 255, 0.3);
             transform: translateY(-2px);
             color: white;
         }
-        
+
         .action-btn i {
             font-size: 1.2rem;
         }
-        
+
         .stats-card {
             background: white;
             border-radius: 15px;
             padding: 20px;
             margin-bottom: 20px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
             transition: transform 0.3s;
         }
-        
+
         .stats-card:hover {
             transform: translateY(-5px);
         }
-        
+
         .stats-number {
             font-size: 2.2em;
             font-weight: bold;
             color: #667eea;
             line-height: 1.2;
         }
-        
+
         .stats-label {
             color: #666;
             font-size: 0.9em;
         }
-        
+
         .info-section {
             background: white;
             border-radius: 15px;
             padding: 20px;
             margin-bottom: 20px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
-        
+
         .info-title {
             font-size: 1.1em;
             font-weight: 600;
@@ -301,34 +302,34 @@ if (isset($_GET['export_json'])) {
             gap: 10px;
             color: #333;
         }
-        
+
         .info-title i {
             color: #667eea;
         }
-        
+
         .info-item {
             padding: 8px 0;
             border-bottom: 1px solid #f0f0f0;
         }
-        
+
         .info-item:last-child {
             border-bottom: none;
         }
-        
+
         .info-label {
             font-weight: 600;
             color: #666;
             font-size: 0.9em;
         }
-        
+
         .info-value {
             color: #333;
         }
-        
+
         .topic-category {
             margin-bottom: 20px;
         }
-        
+
         .topic-category-header {
             display: flex;
             align-items: center;
@@ -339,33 +340,33 @@ if (isset($_GET['export_json'])) {
             border-radius: 10px;
             border-left: 4px solid;
         }
-        
+
         .topic-table {
             font-size: 0.9em;
         }
-        
+
         .topic-table th {
             background: #f8f9fa;
             font-weight: 600;
             color: #495057;
         }
-        
+
         .grade-cell {
             font-weight: 600;
         }
-        
+
         .grade-high {
             color: #28a745;
         }
-        
+
         .grade-medium {
             color: #ffc107;
         }
-        
+
         .grade-low {
             color: #dc3545;
         }
-        
+
         .lesson-card {
             background: #f8f9fa;
             border-radius: 10px;
@@ -373,20 +374,20 @@ if (isset($_GET['export_json'])) {
             margin-bottom: 10px;
             border-left: 4px solid #667eea;
         }
-        
+
         .lesson-card.completed {
             border-left-color: #28a745;
         }
-        
+
         .lesson-card.cancelled {
             border-left-color: #dc3545;
             opacity: 0.7;
         }
-        
+
         .lesson-card.planned {
             border-left-color: #ffc107;
         }
-        
+
         .comment-item {
             background: #f8f9fa;
             border-radius: 10px;
@@ -394,7 +395,7 @@ if (isset($_GET['export_json'])) {
             margin-bottom: 10px;
             border-left: 3px solid #667eea;
         }
-        
+
         .comment-meta {
             font-size: 0.85em;
             color: #666;
@@ -402,7 +403,7 @@ if (isset($_GET['export_json'])) {
             display: flex;
             justify-content: space-between;
         }
-        
+
         .badge-unpaid {
             background: #dc3545;
             color: white;
@@ -410,42 +411,42 @@ if (isset($_GET['export_json'])) {
             border-radius: 20px;
             font-size: 0.9em;
         }
-        
+
         .progress {
             height: 8px;
             border-radius: 4px;
         }
-        
+
         .progress-bar {
             border-radius: 4px;
         }
-        
+
         .dropdown-menu {
             border: none;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
             border-radius: 12px;
             padding: 8px 0;
             min-width: 200px;
         }
-        
+
         .dropdown-item {
             padding: 10px 20px;
             transition: all 0.2s;
         }
-        
+
         .dropdown-item:hover {
             background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
             padding-left: 25px;
         }
-        
+
         .dropdown-item i {
             width: 22px;
             margin-right: 8px;
         }
-        
+
         .copy-link-btn {
-            background: rgba(255,255,255,0.2);
-            border: 1px solid rgba(255,255,255,0.3);
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
             color: white;
             width: 40px;
             height: 40px;
@@ -455,57 +456,107 @@ if (isset($_GET['export_json'])) {
             justify-content: center;
             transition: all 0.3s;
         }
-        
+
         .copy-link-btn:hover {
-            background: rgba(255,255,255,0.3);
+            background: rgba(255, 255, 255, 0.3);
             transform: translateY(-2px);
         }
-        
+
         @media (max-width: 768px) {
             .action-buttons {
                 position: static;
                 justify-content: flex-end;
                 margin-bottom: 20px;
             }
-            
+
             .diary-header {
                 padding-top: 20px;
             }
         }
+
+        /* Стили для иконки оплачено */
+        .paid-badge-icon {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(40, 167, 69, 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        /* Стили для иконки не оплачено */
+        .unpaid-badge-icon {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(220, 53, 69, 0.3);
+        }
+
+        .unpaid-badge-icon i {
+            font-size: 1rem;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 2px 5px rgba(40, 167, 69, 0.3);
+            }
+
+            50% {
+                box-shadow: 0 2px 10px rgba(40, 167, 69, 0.5);
+            }
+
+            100% {
+                box-shadow: 0 2px 5px rgba(40, 167, 69, 0.3);
+            }
+        }
     </style>
 </head>
+
 <body>
     <?php include 'menu.php'; ?>
-    
+
     <div class="container-fluid py-4">
         <!-- Шапка дневника -->
         <div class="diary-header">
             <div class="action-buttons">
                 <!-- Кнопка перехода к занятиям -->
-                <a href="lessons.php?diary_id=<?php echo $diaryId; ?>" class="action-btn" data-bs-toggle="tooltip" title="Перейти к занятиям">
+                <a href="lessons.php?diary_id=<?php echo $diaryId; ?>" class="action-btn" data-bs-toggle="tooltip"
+                    title="Перейти к занятиям">
                     <i class="bi bi-calendar-check"></i>
                 </a>
-                
+
                 <!-- Кнопка информации об ученике -->
-                <a href="students.php?action=view&id=<?php echo $diary['student_id']; ?>" class="action-btn" data-bs-toggle="tooltip" title="Информация об ученике">
+                <a href="students.php?action=view&id=<?php echo $diary['student_id']; ?>" class="action-btn"
+                    data-bs-toggle="tooltip" title="Информация об ученике">
                     <i class="bi bi-person"></i>
                 </a>
-                
+
                 <!-- Кнопка возврата к списку дневников -->
                 <a href="diaries.php" class="action-btn" data-bs-toggle="tooltip" title="К списку дневников">
                     <i class="bi bi-journals"></i>
                 </a>
-                
+
                 <!-- Кнопка копирования публичной ссылки (если есть) -->
                 <?php if ($diary['public_link']): ?>
-                    <button class="action-btn copy-link-btn" onclick="copyPublicLink()" data-bs-toggle="tooltip" title="Копировать публичную ссылку">
+                    <button class="action-btn copy-link-btn" onclick="copyPublicLink()" data-bs-toggle="tooltip"
+                        title="Копировать публичную ссылку">
                         <i class="bi bi-link"></i>
                     </button>
                 <?php endif; ?>
-                
+
                 <!-- Выпадающее меню экспорта -->
                 <div class="dropdown">
-                    <button class="action-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-toggle="tooltip" title="Экспорт данных">
+                    <button class="action-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false"
+                        data-bs-toggle="tooltip" title="Экспорт данных">
                         <i class="bi bi-download"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
@@ -522,13 +573,14 @@ if (isset($_GET['export_json'])) {
                     </ul>
                 </div>
             </div>
-            
+
             <h1 class="mb-2"><?php echo htmlspecialchars($diary['name']); ?></h1>
             <p class="mb-1">
-                <i class="bi bi-person-circle"></i> 
+                <i class="bi bi-person-circle"></i>
                 <?php echo htmlspecialchars($diary['student_last_name'] . ' ' . $diary['student_first_name'] . ' ' . ($diary['student_middle_name'] ?? '')); ?>
                 <?php if ($diary['student_class']): ?>
-                    <span class="badge bg-light text-dark ms-2"><?php echo htmlspecialchars($diary['student_class']); ?> класс</span>
+                    <span
+                        class="badge bg-light text-dark ms-2"><?php echo htmlspecialchars($diary['student_class']); ?></span>
                 <?php endif; ?>
             </p>
             <?php if ($diary['category_name']): ?>
@@ -542,7 +594,7 @@ if (isset($_GET['export_json'])) {
                 </div>
             <?php endif; ?>
         </div>
-        
+
         <!-- Статистика -->
         <div class="row mb-4">
             <div class="col-md-3">
@@ -550,7 +602,7 @@ if (isset($_GET['export_json'])) {
                     <div class="stats-number"><?php echo $stats['total_lessons'] ?? 0; ?></div>
                     <div class="stats-label">Всего занятий</div>
                     <small class="text-muted">
-                        Проведено: <?php echo $stats['completed_lessons'] ?? 0; ?> | 
+                        Проведено: <?php echo $stats['completed_lessons'] ?? 0; ?> |
                         Отменено: <?php echo $stats['cancelled_lessons'] ?? 0; ?>
                     </small>
                 </div>
@@ -560,7 +612,9 @@ if (isset($_GET['export_json'])) {
                     <div class="stats-number"><?php echo number_format($stats['paid_sum'] ?? 0, 0, ',', ' '); ?> ₽</div>
                     <div class="stats-label">Оплачено</div>
                     <small class="text-muted">
-                        Долг: <?php echo number_format(($stats['total_sum'] ?? 0) - ($stats['paid_sum'] ?? 0), 0, ',', ' '); ?> ₽
+                        Долг:
+                        <?php echo number_format(($stats['total_sum'] ?? 0) - ($stats['paid_sum'] ?? 0), 0, ',', ' '); ?>
+                        ₽
                     </small>
                 </div>
             </div>
@@ -580,7 +634,7 @@ if (isset($_GET['export_json'])) {
                 </div>
             </div>
         </div>
-        
+
         <!-- Дополнительная статистика -->
         <div class="row mb-4">
             <div class="col-md-6">
@@ -589,13 +643,17 @@ if (isset($_GET['export_json'])) {
                     <div class="row">
                         <div class="col-6">
                             <div class="text-center">
-                                <div class="stats-number" style="font-size: 1.8em;"><?php echo round($stats['avg_grade'] ?? 0, 1); ?></div>
+                                <div class="stats-number" style="font-size: 1.8em;">
+                                    <?php echo round($stats['avg_grade'] ?? 0, 1); ?>
+                                </div>
                                 <div class="stats-label">Ср. оценка</div>
                             </div>
                         </div>
                         <div class="col-6">
                             <div class="text-center">
-                                <div class="stats-number" style="font-size: 1.8em;"><?php echo round($stats['avg_homework'] ?? 0, 1); ?></div>
+                                <div class="stats-number" style="font-size: 1.8em;">
+                                    <?php echo round($stats['avg_homework'] ?? 0, 1); ?>
+                                </div>
                                 <div class="stats-label">Ср. оценка ДЗ</div>
                             </div>
                         </div>
@@ -608,13 +666,17 @@ if (isset($_GET['export_json'])) {
                     <div class="row">
                         <div class="col-6">
                             <div class="text-center">
-                                <div class="stats-number" style="font-size: 1.2em;"><?php echo $diary['student_start_date'] ? date('d.m.Y', strtotime($diary['student_start_date'])) : '—'; ?></div>
+                                <div class="stats-number" style="font-size: 1.2em;">
+                                    <?php echo $diary['student_start_date'] ? date('d.m.Y', strtotime($diary['student_start_date'])) : '—'; ?>
+                                </div>
                                 <div class="stats-label">Начало</div>
                             </div>
                         </div>
                         <div class="col-6">
                             <div class="text-center">
-                                <div class="stats-number" style="font-size: 1.2em;"><?php echo $diary['student_end_date'] ? date('d.m.Y', strtotime($diary['student_end_date'])) : '—'; ?></div>
+                                <div class="stats-number" style="font-size: 1.2em;">
+                                    <?php echo $diary['student_end_date'] ? date('d.m.Y', strtotime($diary['student_end_date'])) : '—'; ?>
+                                </div>
                                 <div class="stats-label">Окончание</div>
                             </div>
                         </div>
@@ -622,13 +684,13 @@ if (isset($_GET['export_json'])) {
                 </div>
             </div>
         </div>
-        
+
         <!-- Статистика по темам -->
         <div class="info-section">
             <div class="info-title">
                 <i class="bi bi-book"></i> Статистика по темам
             </div>
-            
+
             <?php if (empty($groupedTopics)): ?>
                 <p class="text-muted text-center py-3">Нет данных по изученным темам</p>
             <?php else: ?>
@@ -638,7 +700,7 @@ if (isset($_GET['export_json'])) {
                             <span class="fw-bold"><?php echo htmlspecialchars($category); ?></span>
                             <span class="badge bg-secondary"><?php echo count($data['topics']); ?> тем</span>
                         </div>
-                        
+
                         <div class="table-responsive">
                             <table class="table table-hover topic-table">
                                 <thead>
@@ -654,20 +716,25 @@ if (isset($_GET['export_json'])) {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($data['topics'] as $topic): 
+                                    <?php foreach ($data['topics'] as $topic):
                                         $avgGradeClass = '';
-                                        if ($topic['avg_grade'] >= 4) $avgGradeClass = 'grade-high';
-                                        elseif ($topic['avg_grade'] >= 3) $avgGradeClass = 'grade-medium';
-                                        elseif ($topic['avg_grade'] > 0) $avgGradeClass = 'grade-low';
-                                    ?>
+                                        if ($topic['avg_grade'] >= 4)
+                                            $avgGradeClass = 'grade-high';
+                                        elseif ($topic['avg_grade'] >= 3)
+                                            $avgGradeClass = 'grade-medium';
+                                        elseif ($topic['avg_grade'] > 0)
+                                            $avgGradeClass = 'grade-low';
+                                        ?>
                                         <tr>
                                             <td><?php echo htmlspecialchars($topic['topic_name']); ?></td>
                                             <td class="text-center"><?php echo $topic['total_occurrences']; ?></td>
                                             <td class="text-center"><?php echo $topic['lessons_count']; ?></td>
-                                            <td class="text-center grade-cell <?php echo $topic['min_grade'] ? ($topic['min_grade'] >= 4 ? 'grade-high' : ($topic['min_grade'] >= 3 ? 'grade-medium' : 'grade-low')) : ''; ?>">
+                                            <td
+                                                class="text-center grade-cell <?php echo $topic['min_grade'] ? ($topic['min_grade'] >= 4 ? 'grade-high' : ($topic['min_grade'] >= 3 ? 'grade-medium' : 'grade-low')) : ''; ?>">
                                                 <?php echo $topic['min_grade'] ?? '—'; ?>
                                             </td>
-                                            <td class="text-center grade-cell <?php echo $topic['max_grade'] ? ($topic['max_grade'] >= 4 ? 'grade-high' : ($topic['max_grade'] >= 3 ? 'grade-medium' : 'grade-low')) : ''; ?>">
+                                            <td
+                                                class="text-center grade-cell <?php echo $topic['max_grade'] ? ($topic['max_grade'] >= 4 ? 'grade-high' : ($topic['max_grade'] >= 3 ? 'grade-medium' : 'grade-low')) : ''; ?>">
                                                 <?php echo $topic['max_grade'] ?? '—'; ?>
                                             </td>
                                             <td class="text-center grade-cell <?php echo $avgGradeClass; ?>">
@@ -684,48 +751,55 @@ if (isset($_GET['export_json'])) {
                 <?php endforeach; ?>
             <?php endif; ?>
         </div>
-        
+
         <!-- Информация об ученике -->
         <div class="info-section">
             <div class="info-title">
                 <i class="bi bi-person-vcard"></i> Информация об ученике
             </div>
-            
+
             <div class="row">
                 <div class="col-md-6">
                     <div class="info-item">
                         <span class="info-label">Телефон:</span>
-                        <span class="info-value float-end"><?php echo htmlspecialchars($diary['student_phone'] ?? 'Не указан'); ?></span>
+                        <span
+                            class="info-value float-end"><?php echo htmlspecialchars($diary['student_phone'] ?? 'Не указан'); ?></span>
                     </div>
                     <div class="info-item">
                         <span class="info-label">Email:</span>
-                        <span class="info-value float-end"><?php echo htmlspecialchars($diary['student_email'] ?? 'Не указан'); ?></span>
+                        <span
+                            class="info-value float-end"><?php echo htmlspecialchars($diary['student_email'] ?? 'Не указан'); ?></span>
                     </div>
                     <div class="info-item">
                         <span class="info-label">Город:</span>
-                        <span class="info-value float-end"><?php echo htmlspecialchars($diary['student_city'] ?? 'Не указан'); ?></span>
+                        <span
+                            class="info-value float-end"><?php echo htmlspecialchars($diary['student_city'] ?? 'Не указан'); ?></span>
                     </div>
                     <div class="info-item">
                         <span class="info-label">Дата рождения:</span>
-                        <span class="info-value float-end"><?php echo $diary['student_birth_date'] ? date('d.m.Y', strtotime($diary['student_birth_date'])) : 'Не указана'; ?></span>
+                        <span
+                            class="info-value float-end"><?php echo $diary['student_birth_date'] ? date('d.m.Y', strtotime($diary['student_birth_date'])) : 'Не указана'; ?></span>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="info-item">
                         <span class="info-label">Мессенджеры:</span>
                         <span class="info-value float-end">
-                            <?php 
+                            <?php
                             $messengers = [];
-                            if (!empty($diary['student_messenger1'])) $messengers[] = $diary['student_messenger1'];
-                            if (!empty($diary['student_messenger2'])) $messengers[] = $diary['student_messenger2'];
-                            if (!empty($diary['student_messenger3'])) $messengers[] = $diary['student_messenger3'];
+                            if (!empty($diary['student_messenger1']))
+                                $messengers[] = $diary['student_messenger1'];
+                            if (!empty($diary['student_messenger2']))
+                                $messengers[] = $diary['student_messenger2'];
+                            if (!empty($diary['student_messenger3']))
+                                $messengers[] = $diary['student_messenger3'];
                             echo htmlspecialchars(implode(', ', $messengers)) ?: 'Не указаны';
                             ?>
                         </span>
                     </div>
                 </div>
             </div>
-            
+
             <?php if (!empty($diary['student_goals'])): ?>
                 <div class="mt-3">
                     <span class="info-label">Цели обучения:</span>
@@ -735,146 +809,203 @@ if (isset($_GET['export_json'])) {
                 </div>
             <?php endif; ?>
         </div>
-        
+
         <!-- Родители -->
         <?php if (!empty($parents)): ?>
-        <div class="info-section">
-            <div class="info-title">
-                <i class="bi bi-people"></i> Родители
-            </div>
-            
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Родство</th>
-                            <th>ФИО</th>
-                            <th>Телефон</th>
-                            <th>Email</th>
-                            <th>Мессенджер</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($parents as $parent): ?>
+            <div class="info-section">
+                <div class="info-title">
+                    <i class="bi bi-people"></i> Родители
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
                             <tr>
-                                <td><?php echo htmlspecialchars($parent['relationship'] ?? '—'); ?></td>
-                                <td><?php echo htmlspecialchars($parent['full_name']); ?></td>
-                                <td><?php echo htmlspecialchars($parent['phone'] ?? '—'); ?></td>
-                                <td><?php echo htmlspecialchars($parent['email'] ?? '—'); ?></td>
-                                <td><?php echo htmlspecialchars($parent['messenger_contact'] ?? '—'); ?></td>
+                                <th>Родство</th>
+                                <th>ФИО</th>
+                                <th>Телефон</th>
+                                <th>Email</th>
+                                <th>Мессенджер</th>
                             </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($parents as $parent): ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars($parent['relationship'] ?? '—'); ?></td>
+                                    <td><?php echo htmlspecialchars($parent['full_name']); ?></td>
+                                    <td><?php echo htmlspecialchars($parent['phone'] ?? '—'); ?></td>
+                                    <td><?php echo htmlspecialchars($parent['email'] ?? '—'); ?></td>
+                                    <td><?php echo htmlspecialchars($parent['messenger_contact'] ?? '—'); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        </div>
         <?php endif; ?>
-        
+
         <!-- Комментарии к ученику -->
         <?php if (!empty($studentComments)): ?>
-        <div class="info-section">
-            <div class="info-title">
-                <i class="bi bi-chat"></i> Последние комментарии
-            </div>
-            
-            <?php foreach ($studentComments as $comment): ?>
-                <div class="comment-item">
-                    <div class="comment-meta">
-                        <span><i class="bi bi-person"></i> <?php echo htmlspecialchars($comment['first_name'] . ' ' . $comment['last_name']); ?></span>
-                        <span><i class="bi bi-clock"></i> <?php echo date('d.m.Y H:i', strtotime($comment['created_at'])); ?></span>
-                    </div>
-                    <div class="comment-text">
-                        <?php echo nl2br(htmlspecialchars($comment['comment'])); ?>
-                    </div>
+            <div class="info-section">
+                <div class="info-title">
+                    <i class="bi bi-chat"></i> Последние комментарии
                 </div>
-            <?php endforeach; ?>
-        </div>
-        <?php endif; ?>
-        
-        <!-- Последние занятия -->
-        <div class="info-section">
-            <div class="info-title">
-                <i class="bi bi-calendar-check"></i> Последние занятия
-                <a href="lessons.php?diary_id=<?php echo $diaryId; ?>" class="btn btn-sm btn-outline-primary ms-auto">
-                    Все занятия
-                </a>
-            </div>
-            
-            <?php if (empty($recentLessons)): ?>
-                <p class="text-muted text-center py-3">В этом дневнике пока нет занятий</p>
-            <?php else: ?>
-                <?php foreach ($recentLessons as $lesson): 
-                    $statusClass = $lesson['is_completed'] ? 'completed' : ($lesson['is_cancelled'] ? 'cancelled' : 'planned');
-                ?>
-                    <div class="lesson-card <?php echo $statusClass; ?>">
-                        <div class="row">
-                            <div class="col-md-2">
-                                <div class="fw-bold"><?php echo date('d.m.Y', strtotime($lesson['lesson_date'])); ?></div>
-                                <div class="text-primary"><?php echo date('H:i', strtotime($lesson['start_time'])); ?></div>
-                            </div>
-                            <div class="col-md-3">
-                                <?php if (!empty($lesson['topic_names'])): ?>
-                                    <small class="text-muted">Темы:</small>
-                                    <div><?php echo htmlspecialchars(substr($lesson['topic_names'], 0, 250)) . (strlen($lesson['topic_names']) > 250 ? '...' : ''); ?></div>
-                                <?php endif; ?>
-                            </div>
-                            <div class="col-md-3">
-                                <?php if (!empty($lesson['homework_manual'])): ?>
-                                    <small class="text-muted">ДЗ:</small>
-                                    <div><?php echo htmlspecialchars(substr($lesson['homework_manual'], 0, 250)) . (strlen($lesson['homework_manual']) > 250 ? '...' : ''); ?></div>
-                                <?php endif; ?>
-                            </div>
-                            <div class="col-md-2">
-                                <?php if ($lesson['grade_lesson'] !== null): ?>
-                                    <span class="badge bg-primary">Оценка: <?php echo $lesson['grade_lesson']; ?>/5</span>
-                                <?php endif; ?>
-                            </div>
-                            <div class="col-md-2 text-end">
-                                <?php if ($lesson['is_paid']): ?>
-                                    <span class="badge bg-success">Оплачено</span>
-                                <?php else: ?>
-                                    <span class="badge bg-danger">Не оплачено</span>
-                                <?php endif; ?>
-                            </div>
+
+                <?php foreach ($studentComments as $comment): ?>
+                    <div class="comment-item">
+                        <div class="comment-meta">
+                            <span><i class="bi bi-person"></i>
+                                <?php echo htmlspecialchars($comment['first_name'] . ' ' . $comment['last_name']); ?></span>
+                            <span><i class="bi bi-clock"></i>
+                                <?php echo date('d.m.Y H:i', strtotime($comment['created_at'])); ?></span>
+                        </div>
+                        <div class="comment-text">
+                            <?php echo nl2br(htmlspecialchars($comment['comment'])); ?>
                         </div>
                     </div>
                 <?php endforeach; ?>
-            <?php endif; ?>
-        </div>
+            </div>
+        <?php endif; ?>
+
+        <!-- Последние занятия -->
+        
+<div class="info-section">
+    <div class="info-title">
+        <i class="bi bi-calendar-check"></i> Последние занятия
+        <a href="lessons.php?diary_id=<?php echo $diaryId; ?>" class="btn btn-sm btn-outline-primary ms-auto">
+            К занятиям
+        </a>
     </div>
     
+    <?php if (empty($recentLessons)): ?>
+        <p class="text-muted text-center py-3">В этом дневнике пока нет занятий</p>
+    <?php else: ?>
+        <?php foreach ($recentLessons as $lesson): 
+            $statusClass = $lesson['is_completed'] ? 'completed' : ($lesson['is_cancelled'] ? 'cancelled' : 'planned');
+        ?>
+            <div class="lesson-card <?php echo $statusClass; ?>" 
+                 onclick="window.location.href='lessons.php?action=edit&id=<?php echo $lesson['id']; ?>&diary_id=<?php echo $diaryId; ?>'"
+                 style="cursor: pointer; transition: all 0.2s;">
+                
+                <!-- Статус занятия -->
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <span class="badge <?php 
+                            if ($lesson['is_completed']) echo 'bg-success';
+                            elseif ($lesson['is_cancelled']) echo 'bg-danger';
+                            else echo 'bg-warning';
+                        ?>">
+                            <?php 
+                            if ($lesson['is_completed']) echo '<i class="bi bi-check-circle"></i> Проведено';
+                            elseif ($lesson['is_cancelled']) echo '<i class="bi bi-x-circle"></i> Отменено';
+                            else echo '<i class="bi bi-clock"></i> Запланировано';
+                            ?>
+                        </span>
+                        
+                        <?php if ($lesson['is_paid'] && !$lesson['is_cancelled']): ?>
+                            <span class="badge bg-success ms-1">
+                                <i class="bi bi-currency-dollar"></i> Оплачено
+                            </span>
+                        <?php endif; ?>
+                    </div>
+                    
+                    <!-- Кнопка быстрого перехода (опционально) -->
+                    <span class="text-muted small" style="opacity: 0.5;">
+                        <i class="bi bi-box-arrow-up-right"></i>
+                    </span>
+                </div>
+                
+                <!-- Основная информация -->
+                <div class="row">
+                    <div class="col-md-2">
+                        <div class="fw-bold"><?php echo date('d.m.Y', strtotime($lesson['lesson_date'])); ?></div>
+                        <div class="text-primary"><?php echo date('H:i', strtotime($lesson['start_time'])); ?></div>
+                        <div class="text-muted small"><?php echo $lesson['duration']; ?> мин</div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <?php if (!empty($lesson['topic_names'])): ?>
+                            <small class="text-muted">Темы:</small>
+                            <div class="small">
+                                <?php 
+                                $topics = explode(',', $lesson['topic_names']);
+                                foreach (array_slice($topics, 0, 3) as $topic):
+                                ?>
+                                    <span class="badge bg-light text-dark me-1 mb-1"><?php echo htmlspecialchars(trim($topic)); ?></span>
+                                <?php endforeach; ?>
+                                <?php if (count($topics) > 3): ?>
+                                    <span class="badge bg-secondary">+<?php echo count($topics) - 3; ?></span>
+                                <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <?php if (!empty($lesson['homework_manual'])): ?>
+                            <small class="text-muted">ДЗ:</small>
+                            <div class="small text-truncate" style="max-width: 200px;">
+                                <?php echo htmlspecialchars($lesson['homework_manual']); ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <?php if ($lesson['grade_lesson'] !== null): ?>
+                            <span class="badge bg-primary">Оценка: <?php echo $lesson['grade_lesson']; ?>/5</span>
+                        <?php endif; ?>
+                        <?php if ($lesson['grade_homework'] !== null): ?>
+                            <span class="badge bg-info mt-1">ДЗ: <?php echo $lesson['grade_homework']; ?>/5</span>
+                        <?php endif; ?>
+                    </div>
+                    
+                    <div class="col-md-2 text-end">
+                        <?php if (!empty($lesson['comment'])): ?>
+                            <small class="text-muted" data-bs-toggle="tooltip" title="<?php echo htmlspecialchars($lesson['comment']); ?>">
+                                <i class="bi bi-chat"></i> Комм.
+                            </small>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    <?php endif; ?>
+</div>
+
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-    // Инициализация тултипов
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    var tooltipList = tooltipTriggerList.map(function(tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-    
-    function copyPublicLink() {
-        const link = "<?php 
+        // Инициализация тултипов
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+
+        function copyPublicLink() {
+            const link = "<?php
             $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://';
             $host = $_SERVER['HTTP_HOST'];
             $scriptPath = dirname($_SERVER['SCRIPT_NAME']);
             $basePath = rtrim($scriptPath, '/');
-            echo $protocol . $host . $basePath . '/public_diary.php?token=' . $diary['public_link']; 
-        ?>";
-        
-        navigator.clipboard.writeText(link).then(() => {
-            // Временное уведомление
-            const toast = document.createElement('div');
-            toast.className = 'position-fixed top-0 end-0 m-3 p-3 bg-success text-white rounded shadow';
-            toast.style.zIndex = '9999';
-            toast.innerHTML = '<i class="bi bi-check-circle"></i> Ссылка скопирована';
-            document.body.appendChild(toast);
-            
-            setTimeout(() => {
-                toast.remove();
-            }, 2000);
-        }).catch(err => {
-            console.error('Ошибка копирования:', err);
-        });
-    }
+            echo $protocol . $host . $basePath . '/public_diary.php?token=' . $diary['public_link'];
+            ?>";
+
+            navigator.clipboard.writeText(link).then(() => {
+                // Временное уведомление
+                const toast = document.createElement('div');
+                toast.className = 'position-fixed top-0 end-0 m-3 p-3 bg-success text-white rounded shadow';
+                toast.style.zIndex = '9999';
+                toast.innerHTML = '<i class="bi bi-check-circle"></i> Ссылка скопирована';
+                document.body.appendChild(toast);
+
+                setTimeout(() => {
+                    toast.remove();
+                }, 2000);
+            }).catch(err => {
+                console.error('Ошибка копирования:', err);
+            });
+        }
     </script>
 </body>
+
 </html>

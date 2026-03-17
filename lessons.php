@@ -1117,7 +1117,7 @@ if (isset($_GET['delete']) && $lessonId) {
                                     <label class="form-label">Длительность (мин)</label>
                                     <input type="number" name="duration" class="form-control"
                                         value="<?php echo $editLesson ? $editLesson['duration'] : ($diary['lesson_duration'] ?? 60); ?>"
-                                        step="15" min="15">
+                                        step="15" min="0">
                                 </div>
                             </div>
 
