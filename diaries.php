@@ -984,7 +984,7 @@ if ($publicView) {
     
     <div class="btn-group">
     <a href="?action=add" class="btn btn-primary">
-        <i class="bi bi-plus-circle"></i> Добавить тему
+        <i class="bi bi-plus-circle"></i> Создать
     </a>
     <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
         <span class="visually-hidden">Toggle Dropdown</span>

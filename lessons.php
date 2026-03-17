@@ -1365,7 +1365,7 @@ if (isset($_GET['delete']) && $lessonId) {
                 </h2>
                 <div>
                     <a href="?action=edit&diary_id=<?php echo $diaryId; ?>" class="btn btn-primary">
-                        <i class="bi bi-plus-circle"></i> Добавить занятие
+                        <i class="bi bi-plus-circle"></i> Добавить
                     </a>
                     <a href="diaries.php" class="btn btn-outline-secondary">
                         <i class="bi bi-arrow-left"></i> К дневникам
