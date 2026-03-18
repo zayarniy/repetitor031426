@@ -58,6 +58,7 @@ $stmt = $pdo->prepare("
         SUM(CASE WHEN is_completed = 1 THEN 1 ELSE 0 END) as completed_lessons,
         SUM(CASE WHEN is_cancelled = 1 THEN 1 ELSE 0 END) as cancelled_lessons,
         SUM(CASE WHEN is_paid = 0 AND is_completed = 1 THEN 1 ELSE 0 END) as unpaid_lessons,
+        SUM(CASE WHEN is_paid = 0 AND is_completed = 1 THEN cost ELSE 0 END) as debt_sum,
         SUM(CASE WHEN is_paid = 1 THEN cost ELSE 0 END) as paid_sum,
         SUM(cost) as total_sum,
         AVG(grade_lesson) as avg_grade,
@@ -119,7 +120,7 @@ $stmt = $pdo->prepare("
 $stmt->execute([$diary['student_id']]);
 $studentComments = $stmt->fetchAll();
 
-// Получаем последние 10 занятий
+// Получаем последние занятия
 $stmt = $pdo->prepare("
     SELECT 
         l.*,
@@ -613,7 +614,7 @@ if (isset($_GET['export_json'])) {
                     <div class="stats-label">Оплачено</div>
                     <small class="text-muted">
                         Долг:
-                        <?php echo number_format(($stats['total_sum'] ?? 0) - ($stats['paid_sum'] ?? 0), 0, ',', ' '); ?>
+                        <?php echo number_format(($stats['debt_sum'] ?? 0), 0, ',', ' '); ?>
                         ₽
                     </small>
                 </div>
@@ -752,53 +753,6 @@ if (isset($_GET['export_json'])) {
             <?php endif; ?>
         </div>
 
-        <!-- Информация об ученике -->
-        <div class="info-section">
-            <div class="info-title">
-                <i class="bi bi-person-vcard"></i> Информация об ученике
-            </div>
-
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="info-item">
-                        <span class="info-label">Телефон:</span>
-                        <span
-                            class="info-value float-end"><?php echo htmlspecialchars($diary['student_phone'] ?? 'Не указан'); ?></span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Email:</span>
-                        <span
-                            class="info-value float-end"><?php echo htmlspecialchars($diary['student_email'] ?? 'Не указан'); ?></span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Город:</span>
-                        <span
-                            class="info-value float-end"><?php echo htmlspecialchars($diary['student_city'] ?? 'Не указан'); ?></span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Дата рождения:</span>
-                        <span
-                            class="info-value float-end"><?php echo $diary['student_birth_date'] ? date('d.m.Y', strtotime($diary['student_birth_date'])) : 'Не указана'; ?></span>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="info-item">
-                        <span class="info-label">Мессенджеры:</span>
-                        <span class="info-value float-end">
-                            <?php
-                            $messengers = [];
-                            if (!empty($diary['student_messenger1']))
-                                $messengers[] = $diary['student_messenger1'];
-                            if (!empty($diary['student_messenger2']))
-                                $messengers[] = $diary['student_messenger2'];
-                            if (!empty($diary['student_messenger3']))
-                                $messengers[] = $diary['student_messenger3'];
-                            echo htmlspecialchars(implode(', ', $messengers)) ?: 'Не указаны';
-                            ?>
-                        </span>
-                    </div>
-                </div>
-            </div>
 
             <?php if (!empty($diary['student_goals'])): ?>
                 <div class="mt-3">
@@ -810,39 +764,6 @@ if (isset($_GET['export_json'])) {
             <?php endif; ?>
         </div>
 
-        <!-- Родители -->
-        <?php if (!empty($parents)): ?>
-            <div class="info-section">
-                <div class="info-title">
-                    <i class="bi bi-people"></i> Родители
-                </div>
-
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Родство</th>
-                                <th>ФИО</th>
-                                <th>Телефон</th>
-                                <th>Email</th>
-                                <th>Мессенджер</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($parents as $parent): ?>
-                                <tr>
-                                    <td><?php echo htmlspecialchars($parent['relationship'] ?? '—'); ?></td>
-                                    <td><?php echo htmlspecialchars($parent['full_name']); ?></td>
-                                    <td><?php echo htmlspecialchars($parent['phone'] ?? '—'); ?></td>
-                                    <td><?php echo htmlspecialchars($parent['email'] ?? '—'); ?></td>
-                                    <td><?php echo htmlspecialchars($parent['messenger_contact'] ?? '—'); ?></td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        <?php endif; ?>
 
         <!-- Комментарии к ученику -->
         <?php if (!empty($studentComments)): ?>
