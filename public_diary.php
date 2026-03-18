@@ -257,7 +257,7 @@ if ($totalMinutesRemainder > 0 || $totalHours == 0) {
 $stmt = $pdo->prepare("
         SELECT MIN(lesson_date) as first_date, MAX(lesson_date) as last_date
         FROM lessons 
-        WHERE diary_id = ? AND lesson_date IS NOT NULL
+        WHERE diary_id = ? AND lesson_date IS NOT NULL AND is_completed = 1
     ");
     $stmt->execute([$diary['id']]);
     $dates = $stmt->fetch();

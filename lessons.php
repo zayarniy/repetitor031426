@@ -158,7 +158,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_lesson'])) {
     $lessonDate = $_POST['lesson_date'] ?? date('Y-m-d');
     $startTime = $_POST['start_time'] ?? '12:00:00';
     $duration = intval($_POST['duration'] ?? $diary['lesson_duration'] ?? 60);
-    $cost = !empty($_POST['cost']) ? floatval($_POST['cost']) : ($diary['lesson_cost'] ?? null);
+
+    // *** ИСПРАВЛЕНИЕ ЗДЕСЬ: Обработка стоимости с учетом 0 ***
+    // Проверяем, было ли поле отправлено и имеет ли оно значение
+    if (isset($_POST['cost']) && $_POST['cost'] !== '') {
+        // Пользователь ввел значение (включая 0)
+        $cost = floatval($_POST['cost']);
+        if ($cost < 0) {
+            $cost = 0;
+        }
+    } else {
+        // Поле не заполнено - используем значение из дневника
+        $cost = $diary['lesson_cost'] ?? null;
+    }
+
+    //$cost = !empty($_POST['cost']) ? floatval($_POST['cost']) : ($diary['lesson_cost'] ?? null);
 
     $topicsManual = trim($_POST['topics_manual'] ?? '');
     $homeworkManual = trim($_POST['homework_manual'] ?? '');
@@ -1086,9 +1100,14 @@ if (isset($_GET['delete']) && $lessonId) {
                                     </a>-->
                                 <?php endif; ?>
                             <?php endif; ?>
-                            <a href="lessons.php?diary_id=<?php echo $diaryId; ?>" class="btn btn-outline-secondary">
-                                <i class="bi bi-arrow-left"></i> Назад
-                            </a>
+                            <div class="d-flex justify-content-between align-items-center mt-4 mb-4">
+                                <a href="lessons.php?diary_id=<?php echo $diaryId; ?>" class="btn btn-outline-secondary">
+                                    <i class="bi bi-arrow-left"></i> Назад
+                                </a>
+                                <button type="submit" name="save_lesson" class="btn btn-primary">
+                                    <i class="bi bi-save"></i> Сохранить
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1117,7 +1136,7 @@ if (isset($_GET['delete']) && $lessonId) {
                                     <label class="form-label">Длительность (мин)</label>
                                     <input type="number" name="duration" class="form-control"
                                         value="<?php echo $editLesson ? $editLesson['duration'] : ($diary['lesson_duration'] ?? 60); ?>"
-                                        step="15" min="0">
+                                        step="15" min="0" placeholder="0 - бесплатно">
                                 </div>
                             </div>
 
@@ -1125,8 +1144,12 @@ if (isset($_GET['delete']) && $lessonId) {
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Стоимость (₽)</label>
                                     <input type="number" name="cost" class="form-control"
-                                        value="<?php echo $editLesson ? $editLesson['cost'] : ($diary['lesson_cost'] ?? ''); ?>"
-                                        step="100" min="0">
+                                        value="<?php echo $editLesson ? htmlspecialchars($editLesson['cost'] ?? '') : ($diary['lesson_cost'] ?? ''); ?>"
+                                        step="100" min="0" placeholder="0 - бесплатно">
+                                    <small class="text-muted">
+                                        Оставьте пустым для использования стоимости из дневника
+                                        (<?php echo $diary['lesson_cost'] ? number_format($diary['lesson_cost'], 0, ',', ' ') . ' ₽' : 'не указана'; ?>)
+                                    </small>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Статусы</label>
@@ -1509,7 +1532,8 @@ if (isset($_GET['delete']) && $lessonId) {
                         // Получаем домашнее задание
                         $homework = !empty($lesson['homework_manual']) ? $lesson['homework_manual'] : '';
                         ?>
-                        <div class="lesson-card <?php echo $statusClass; ?>" onclick="window.location.href='?action=edit&id=<?php echo $lesson['id']; ?>&diary_id=<?php echo $diaryId; ?>'" >
+                        <div class="lesson-card <?php echo $statusClass; ?>"
+                            onclick="window.location.href='?action=edit&id=<?php echo $lesson['id']; ?>&diary_id=<?php echo $diaryId; ?>'">
                             <div class="row">
                                 <div class="col-md-2">
                                     <div class="lesson-date">
