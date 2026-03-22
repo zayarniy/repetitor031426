@@ -154,7 +154,7 @@ $allResourcesWithLabels = $stmt->fetchAll();
 
 
 // Сохранение занятия
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_lesson'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['save_lesson']) || isset($_POST['save_lesson2']))) {
     $lessonDate = $_POST['lesson_date'] ?? date('Y-m-d');
     $startTime = $_POST['start_time'] ?? '12:00:00';
     $duration = intval($_POST['duration'] ?? $diary['lesson_duration'] ?? 60);
@@ -1071,49 +1071,51 @@ if (isset($_GET['delete']) && $lessonId) {
             </div>
 
         <?php elseif ($action === 'edit' || $lessonId): ?>
-            <!-- Форма редактирования занятия -->
-            <div class="row">
-                <div class="col-12">
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <h2>
-                            <i class="bi bi-calendar-plus"></i>
-                            <?php echo $lessonId ? 'Редактирование занятия' : 'Новое занятие'; ?>
-                            <small
-                                class="text-muted"><?php echo htmlspecialchars($diary['last_name'] . ' ' . $diary['first_name']); ?></small>
-                        </h2>
-                        <div>
-                            <?php if ($lessonId && $editLesson): ?>
-                                <?php if ($editLesson['public_link']): ?>
-                                    <button class="btn btn-sm btn-outline-info me-2" onclick="copyLessonLink()">
-                                        <i class="bi bi-link"></i> Копировать ссылку
-                                    </button>
-                                    <a href="?remove_link=1&id=<?php echo $lessonId; ?>&diary_id=<?php echo $diaryId; ?>"
-                                        class="btn btn-sm btn-outline-warning me-2"
-                                        onclick="return confirm('Удалить публичную ссылку?')">
-                                        <i class="bi bi-link-45deg"></i> Удалить ссылку
-                                    </a>
-                                <?php else: ?>
-                                    <!--
+            <form method="POST" action="" id="lessonForm">
+
+                <!-- Форма редактирования занятия -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h2>
+                                <i class="bi bi-calendar-plus"></i>
+                                <?php echo $lessonId ? 'Редактирование занятия' : 'Новое занятие'; ?>
+                                <small
+                                    class="text-muted"><?php echo htmlspecialchars($diary['last_name'] . ' ' . $diary['first_name']); ?></small>
+                            </h2>
+                            <div>
+                                <?php if ($lessonId && $editLesson): ?>
+                                    <?php if ($editLesson['public_link']): ?>
+                                        <button class="btn btn-sm btn-outline-info me-2" onclick="copyLessonLink()">
+                                            <i class="bi bi-link"></i> Копировать ссылку
+                                        </button>
+                                        <a href="?remove_link=1&id=<?php echo $lessonId; ?>&diary_id=<?php echo $diaryId; ?>"
+                                            class="btn btn-sm btn-outline-warning me-2"
+                                            onclick="return confirm('Удалить публичную ссылку?')">
+                                            <i class="bi bi-link-45deg"></i> Удалить ссылку
+                                        </a>
+                                    <?php else: ?>
+                                        <!--
                                     <a href="?generate_link=1&id=<?php echo $lessonId; ?>&diary_id=<?php echo $diaryId; ?>"
                                         class="btn btn-sm btn-outline-success me-2">
                                         <i class="bi bi-link-45deg"></i> Создать ссылку
                                     </a>-->
+                                    <?php endif; ?>
                                 <?php endif; ?>
-                            <?php endif; ?>
-                            <div class="d-flex justify-content-between align-items-center mt-4 mb-4">
-                                <a href="lessons.php?diary_id=<?php echo $diaryId; ?>" class="btn btn-outline-secondary">
-                                    <i class="bi bi-arrow-left"></i> Назад
-                                </a>
-                                <button type="submit" name="save_lesson" class="btn btn-primary">
-                                    <i class="bi bi-save"></i> Сохранить
-                                </button>
+                                <div class="d-flex justify-content-between align-items-center mt-4 mb-4">
+                                    <a href="lessons.php?diary_id=<?php echo $diaryId; ?>"
+                                        class="btn btn-outline-secondary">
+                                        <i class="bi bi-arrow-left"></i> Назад
+                                    </a>
+                                    <button type="submit" name="save_lesson2" class="btn btn-primary">
+                                        <i class="bi bi-save"></i> Сохранить
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <form method="POST" action="" id="lessonForm">
                 <div class="row">
                     <div class="col-md-8">
                         <!-- Основная информация -->
@@ -1136,7 +1138,7 @@ if (isset($_GET['delete']) && $lessonId) {
                                     <label class="form-label">Длительность (мин)</label>
                                     <input type="number" name="duration" class="form-control"
                                         value="<?php echo $editLesson ? $editLesson['duration'] : ($diary['lesson_duration'] ?? 60); ?>"
-                                        step="15" min="0" placeholder="0 - бесплатно">
+                                        min="0" placeholder="0 - бесплатно">
                                 </div>
                             </div>
 
@@ -1329,7 +1331,6 @@ if (isset($_GET['delete']) && $lessonId) {
                                 </div>
                             </div>
                         </div>
-
                         <button type="submit" name="save_lesson" class="btn btn-primary btn-lg mb-4">
                             <i class="bi bi-save"></i> Сохранить занятие
                         </button>

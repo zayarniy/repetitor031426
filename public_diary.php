@@ -157,6 +157,51 @@ foreach ($lessons as $lesson) {
     }
 }
 
+// Получаем статистику по оценкам
+$gradeStats = [
+    'lesson' => ['total' => 0, 'count' => 0, 'avg' => 0, 'distribution' => []],
+    'homework' => ['total' => 0, 'count' => 0, 'avg' => 0, 'distribution' => []]
+];
+
+if ($diary && !isset($error)) {
+    // Статистика оценок за занятия
+    $stmt = $pdo->prepare("
+        SELECT 
+            grade_lesson,
+            grade_homework
+        FROM lessons 
+        WHERE diary_id = ? AND is_completed = 1
+    ");
+    $stmt->execute([$diary['id']]);
+    $grades = $stmt->fetchAll();
+    
+    foreach ($grades as $grade) {
+        // Оценки за занятие
+        if ($grade['grade_lesson'] !== null && $grade['grade_lesson'] !== '' && $grade['grade_lesson']!='0') {
+            $gradeStats['lesson']['total'] += $grade['grade_lesson'];
+            $gradeStats['lesson']['count']++;
+            $val = (int)$grade['grade_lesson'];
+            $gradeStats['lesson']['distribution'][$val] = ($gradeStats['lesson']['distribution'][$val] ?? 0) + 1;
+        }
+        
+        // Оценки за домашнюю работу
+        if ($grade['grade_homework'] !== null && $grade['grade_homework'] !== '' && $grade['grade_homework'] >0) {
+            $gradeStats['homework']['total'] += $grade['grade_homework'];
+            $gradeStats['homework']['count']++;
+            $val = (int)$grade['grade_homework'];
+            $gradeStats['homework']['distribution'][$val] = ($gradeStats['homework']['distribution'][$val] ?? 0) + 1;
+        }
+    }
+    
+    // Вычисляем средние
+    $gradeStats['lesson']['avg'] = $gradeStats['lesson']['count'] > 0 
+        ? round($gradeStats['lesson']['total'] / $gradeStats['lesson']['count'], 1) 
+        : 0;
+    $gradeStats['homework']['avg'] = $gradeStats['homework']['count'] > 0 
+        ? round($gradeStats['homework']['total'] / $gradeStats['homework']['count'], 1) 
+        : 0;
+}
+
 // Функция для преобразования ссылок в тексте в кликабельные
 function makeLinksClickable($text)
 {
@@ -349,7 +394,7 @@ foreach ($lessons as $lesson) {
     if ($lesson['is_cancelled']) {
         $cancelledLessons++;
     }
-    if ($lesson['grade_lesson'] !== null && $lesson['grade_lesson'] !== '') {
+    if ($lesson['grade_lesson'] !== null && $lesson['grade_lesson'] !== '' && $lesson['grade_lesson']!=0) {
         $gradeSum += $lesson['grade_lesson'];
         $gradeCount++;
     }
@@ -683,6 +728,33 @@ function getNumEnding($number, $titles) {
             font-weight: 600;
             color: #667eea;
         }
+
+        /* Стили для графика распределения оценок */
+.progress {
+    background-color: rgba(255,255,255,0.2);
+    border-radius: 4px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+
+.progress-bar {
+    transition: height 0.3s ease;
+    width: 100% !important;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .progress {
+        height: 40px !important;
+        width: 20px !important;
+    }
+    
+    .stats-card .progress {
+        height: 50px !important;
+    }
+}
     </style>
 </head>
 
@@ -762,7 +834,78 @@ function getNumEnding($number, $titles) {
                 </div>
             </div>
 
-
+<!-- Статистика оценок -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="stats-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <h5><i class="bi bi-star-fill"></i> Оценки за занятия</h5>
+            <div class="row mt-3">
+                <div class="col-6 text-center">
+                    <div class="stats-number" style="font-size: 2.5em;"><?php echo $gradeStats['lesson']['avg']; ?></div>
+                    <div class="stats-label">Средняя оценка</div>
+                </div>
+                <div class="col-6 text-center">
+                    <div class="stats-number" style="font-size: 2.5em;"><?php echo $gradeStats['lesson']['count']; ?></div>
+                    <div class="stats-label">Оценок выставлено</div>
+                </div>
+            </div>
+            
+            <?php if (!empty($gradeStats['lesson']['distribution'])): ?>
+                <div class="mt-3">
+                    <small class="text-white-50">Распределение:</small>
+                    <div class="d-flex justify-content-between mt-1">
+                        <?php for ($i = 5; $i >= 1; $i--): ?>
+                            <?php $count = $gradeStats['lesson']['distribution'][$i] ?? 0; ?>
+                            <?php $percent = $gradeStats['lesson']['count'] > 0 ? round($count / $gradeStats['lesson']['count'] * 100) : 0; ?>
+                            <div class="text-center" style="flex: 1;">
+                                <div class="fw-bold"><?php echo $i; ?></div>
+                                <div class="progress" style="height: 60px; width: 30px; margin: 0 auto;">
+                                    <div class="progress-bar bg-warning" style="height: <?php echo $percent; ?>%; width: 100%;"></div>
+                                </div>
+                                <small><?php echo $count; ?></small>
+                            </div>
+                        <?php endfor; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="stats-card" style="background: linear-gradient(135deg, #20c997 0%, #28a745 100%);">
+            <h5><i class="bi bi-journal-check"></i> Оценки за домашние работы</h5>
+            <div class="row mt-3">
+                <div class="col-6 text-center">
+                    <div class="stats-number" style="font-size: 2.5em;"><?php echo $gradeStats['homework']['avg']; ?></div>
+                    <div class="stats-label">Средняя оценка</div>
+                </div>
+                <div class="col-6 text-center">
+                    <div class="stats-number" style="font-size: 2.5em;"><?php echo $gradeStats['homework']['count']; ?></div>
+                    <div class="stats-label">Оценок выставлено</div>
+                </div>
+            </div>
+            
+            <?php if (!empty($gradeStats['homework']['distribution'])): ?>
+                <div class="mt-3">
+                    <small class="text-white-50">Распределение:</small>
+                    <div class="d-flex justify-content-between mt-1">
+                        <?php for ($i = 5; $i >= 1; $i--): ?>
+                            <?php $count = $gradeStats['homework']['distribution'][$i] ?? 0; ?>
+                            <?php $percent = $gradeStats['homework']['count'] > 0 ? round($count / $gradeStats['homework']['count'] * 100) : 0; ?>
+                            <div class="text-center" style="flex: 1;">
+                                <div class="fw-bold"><?php echo $i; ?></div>
+                                <div class="progress" style="height: 60px; width: 30px; margin: 0 auto;">
+                                    <div class="progress-bar bg-info" style="height: <?php echo $percent; ?>%; width: 100%;"></div>
+                                </div>
+                                <small><?php echo $count; ?></small>
+                            </div>
+                        <?php endfor; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
 
             <!-- Информация о дневнике -->
             <div class="row mb-4">
