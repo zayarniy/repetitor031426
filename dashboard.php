@@ -931,7 +931,17 @@ foreach ($schedule as $lesson) {
                             </div>
                             
                             <!-- Кнопки действий -->
+
+                            
                             <div class="lesson-actions d-flex flex-column gap-1" onclick="event.stopPropagation()">
+                                    <!-- Новая кнопка информации об ученике -->
+                                <a href="students.php?action=view&id=<?php echo $lesson['student_id']; ?>" 
+                                class="btn btn-sm btn-outline-info p-1" 
+                                style="width: 30px; height: 30px;"
+                                data-bs-toggle="tooltip" 
+                                title="Информация об ученике">
+                                    <i class="bi bi-person"></i>
+                                </a>
                                 <a href="lessons.php?diary_id=<?php echo $lesson['diary_id']; ?>" 
                                    class="btn btn-sm btn-outline-primary p-1" 
                                    style="width: 30px; height: 30px;"
