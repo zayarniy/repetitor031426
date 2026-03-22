@@ -41,6 +41,11 @@ $currentUser = getCurrentUser($pdo);
                         <i class="bi bi-journals"></i> Дневники
                     </a>
                 </li>
+                <li class="nav-item">
+    <a class="nav-link" href="payments.php">
+        <i class="bi bi-cash-stack"></i> Оплаты
+    </a>
+</li>
 <li class="nav-item dropdown">
     <a class="nav-link dropdown-toggle" href="#" id="statsDropdown" role="button" data-bs-toggle="dropdown">
         <i class="bi bi-graph-up"></i> Статистика
