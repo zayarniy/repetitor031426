@@ -472,7 +472,7 @@ foreach (array_reverse($progressStats) as $stat) {
                                         <td class="text-center"><?php echo $topic['lessons_count']; ?></td>
                                         <td class="text-center">
                                             <span class="grade-badge grade-<?php echo round($topic['avg_grade']); ?>">
-                                                <?php echo number_format($topic['avg_grade'], 1); ?>
+                                                <?php echo number_format($topic['avg_grade']??0, 1); ?>
                                             </span>
                                         </td>
                                         <td class="text-center">

@@ -445,7 +445,9 @@ if (isset($_GET['copy']) && $lessonId) {
 
         if ($sourceLesson) {
             // Создаем копию занятия (дату можно изменить позже)
-            $newDate = date('Y-m-d', strtotime('+7 days')); // Через неделю
+            $originalDateTime = date('Y-m-d', strtotime($sourceLesson['start_time']));
+            $newDate = date('Y-m-d', strtotime($originalDateTime . ' +7 days'));
+            //$newDate = date('Y-m-d', strtotime('+7 days')); // Через неделю
 
             $stmt = $pdo->prepare("
                 INSERT INTO lessons (

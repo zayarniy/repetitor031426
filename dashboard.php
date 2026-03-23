@@ -9,6 +9,7 @@ $userId = $currentUser['id'];
 $weekOffset = isset($_GET['week_offset']) ? intval($_GET['week_offset']) : 0;
 $selectedDate = isset($_GET['week_date']) ? $_GET['week_date'] : '';
 
+
 // Вычисляем даты начала и конца недели с учетом смещения
 if (!empty($selectedDate)) {
     // Используем выбранную дату
@@ -221,6 +222,97 @@ foreach ($schedule as $lesson) {
     $dayOfWeek = strtolower(date('l', strtotime($lesson['lesson_date'])));
     $daysOfWeek[$dayOfWeek][] = $lesson;
 }
+
+// Копирование занятия
+// Копирование занятия
+if (isset($_GET['copy']) && $lessonId) {
+    try {
+        $pdo->beginTransaction();
+        
+        // Получаем исходное занятие
+        $stmt = $pdo->prepare("
+            SELECT l.* 
+            FROM lessons l
+            JOIN diaries d ON l.diary_id = d.id
+            WHERE l.id = ? AND d.user_id = ?
+        ");
+        $stmt->execute([$lessonId, $userId]);
+        $sourceLesson = $stmt->fetch();
+        
+        if ($sourceLesson) {
+               $originalDateTime = date('Y-m-d', strtotime($sourceLesson['start_time']));
+    $newDate = date('Y-m-d', strtotime($originalDateTime . ' +7 days'));
+            // Создаем копию занятия (дата через 7 дней)
+            $newDate = date('Y-m-d', strtotime('+7 days'));
+            
+            $stmt = $pdo->prepare("
+                INSERT INTO lessons (
+                    diary_id, student_id, lesson_date, start_time, duration, cost,
+                    topics_manual, homework_manual, comment,
+                    link_url, link_comment,
+                    grade_lesson, grade_comment, grade_homework, homework_comment,
+                    is_cancelled, is_completed, is_paid
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+            
+            $stmt->execute([
+                $sourceLesson['diary_id'],
+                $sourceLesson['student_id'],
+                $newDate,
+                $sourceLesson['start_time'],
+                $sourceLesson['duration'],
+                $sourceLesson['cost'],
+                $sourceLesson['topics_manual'],
+                $sourceLesson['homework_manual'],
+                $sourceLesson['comment'],
+                $sourceLesson['link_url'],
+                $sourceLesson['link_comment'],
+                null, // grade_lesson
+                '',
+                null, // grade_homework
+                '',
+                0, // is_cancelled
+                0, // is_completed
+                0  // is_paid
+            ]);
+            
+            $newLessonId = $pdo->lastInsertId();
+            
+            // Копируем связи с темами
+            $stmt = $pdo->prepare("SELECT topic_id FROM lesson_topics WHERE lesson_id = ?");
+            $stmt->execute([$lessonId]);
+            $topics = $stmt->fetchAll();
+            
+            if (!empty($topics)) {
+                $insertStmt = $pdo->prepare("INSERT INTO lesson_topics (lesson_id, topic_id) VALUES (?, ?)");
+                foreach ($topics as $topic) {
+                    $insertStmt->execute([$newLessonId, $topic['topic_id']]);
+                }
+            }
+            
+            // Копируем связи с ресурсами
+            $stmt = $pdo->prepare("SELECT resource_id, comment FROM lesson_resources WHERE lesson_id = ?");
+            $stmt->execute([$lessonId]);
+            $resources = $stmt->fetchAll();
+            
+            if (!empty($resources)) {
+                $insertStmt = $pdo->prepare("INSERT INTO lesson_resources (lesson_id, resource_id, comment) VALUES (?, ?, ?)");
+                foreach ($resources as $resource) {
+                    $insertStmt->execute([$newLessonId, $resource['resource_id'], $resource['comment']]);
+                }
+            }
+            
+            $pdo->commit();
+            
+            // Перенаправляем на редактирование созданной копии
+            header('Location: lessons.php?action=edit&id=' . $newLessonId . '&diary_id=' . $sourceLesson['diary_id'] . '&message=copied');
+            exit();
+        }
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        $error = 'Ошибка при копировании: ' . $e->getMessage();
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -229,418 +321,356 @@ foreach ($schedule as $lesson) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Дашборд - Дневник репетитора</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        /* Ваши существующие стили */
-        .stat-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
-            transition: transform 0.3s;
-        }
-        .stat-card:hover {
-            transform: translateY(-5px);
-        }
-        .stat-card .stat-value {
-            font-size: 2.5em;
-            font-weight: bold;
-        }
-        .stat-card .stat-label {
-            font-size: 0.9em;
-            opacity: 0.9;
-        }
-        .schedule-day {
-            background: white;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .schedule-day h4 {
-            color: #333;
-            border-bottom: 2px solid #f0f0f0;
-            padding-bottom: 10px;
-            margin-bottom: 15px;
-        }
-.lesson-item {
-    background: #f8f9fa;
-    border-left: 4px solid #667eea;
-    border-radius: 8px;
-    padding: 12px 15px;
-    margin-bottom: 10px;
-    cursor: pointer;
-    transition: all 0.3s;
-    position: relative; /* Важно для позиционирования тултипа */
-    z-index: 1; /* Базовый z-index */
-}
-/* При наведении увеличиваем z-index, чтобы тултип не перекрывался */
-.lesson-item:hover {
-    z-index: 1000;
-    background: #e9ecef;
-    transform: translateX(5px);
-}
-
-        .lesson-item.completed {
-            border-left-color: #28a745;
-            background: #f0fff4;
-        }
-        .lesson-item.cancelled {
-            border-left-color: #dc3545;
-            background: #fff5f5;
-            opacity: 0.7;
-        }
-        .lesson-item .lesson-time {
-            font-weight: bold;
-            color: #667eea;
-        }
-        .lesson-item .lesson-student {
-            font-weight: 600;
-        }
-        .lesson-item .lesson-diary {
-            font-size: 0.85em;
-            color: #666;
-        }
-.lesson-tooltip {
-    display: none;
-    position: absolute;
-    background: white;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 10px;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-    z-index: 9999; /* Увеличиваем z-index */
-    max-width: 300px;
-    min-width: 200px;
-    pointer-events: none; /* Чтобы мышь не взаимодействовала с тултипом */
-    top: 100%; /* Позиционируем снизу от родителя */
-    left: 0;
-    margin-top: 5px;
-}
-
-.lesson-tooltip::before {
-    content: '';
-    position: absolute;
-    top: -8px;
-    left: 20px;
-    width: 0;
-    height: 0;
-    border-left: 8px solid transparent;
-    border-right: 8px solid transparent;
-    border-bottom: 8px solid white;
-    filter: drop-shadow(0 -2px 2px rgba(0,0,0,0.1));
-}
-
-
-        .lesson-item:hover .lesson-tooltip {
-            display: block;
-            top: 100%;
-            left: 0;
-            margin-top: 5px;
-        }
-        .filter-panel {
-            background: white;
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .btn-filter {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 10px 20px;
-            transition: all 0.3s;
-        }
-        .btn-filter:hover {
-            transform: translateY(-2px);
-            color: white;
-        }
-        .badge-label {
-            background: #e9ecef;
-            color: #495057;
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 0.85em;
-            margin-right: 5px;
-            cursor: pointer;
-        }
-        .badge-label.selected {
-            background: #667eea;
-            color: white;
-        }
-        
-        /* Стили для навигации по неделям */
-        .week-navigation {
-            background: white;
-            border-radius: 15px;
-            padding: 15px 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        
-        .btn-group .btn-outline-primary {
-            border-color: #dee2e6;
-            color: #495057;
-        }
-        
-        .btn-group .btn-outline-primary:hover {
-            background: #f8f9fa;
-            color: #667eea;
-            border-color: #667eea;
-        }
-        
-        .btn-group .btn-outline-primary.active {
-            background: #667eea;
-            color: white;
-            border-color: #667eea;
-        }
-        
-        .current-week-badge {
-            background: #28a745;
-            color: white;
-            font-size: 0.75rem;
-            padding: 2px 8px;
-            border-radius: 12px;
-            margin-left: 8px;
-        }
-        
-        @media (max-width: 768px) {
-            .week-navigation .d-flex {
-                flex-direction: column;
-                gap: 10px;
-            }
-            
-            .btn-group {
-                width: 100%;
-            }
-            
-            .btn-group .btn {
-                flex: 1;
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-            }
-        }
-/* Стили для плашки оплачено */
-.paid-badge {
-    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-    color: white;
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    box-shadow: 0 2px 5px rgba(40, 167, 69, 0.3);
-    animation: pulse 2s infinite;
-}
-
-.paid-badge i {
-    font-size: 0.8rem;
-}
-
-@keyframes pulse {
-    0% {
-        box-shadow: 0 2px 5px rgba(40, 167, 69, 0.3);
+<style>
+    /* Ваши существующие стили */
+    .stat-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 20px;
+        transition: transform 0.3s;
     }
-    50% {
-        box-shadow: 0 2px 10px rgba(40, 167, 69, 0.5);
+    .stat-card:hover {
+        transform: translateY(-5px);
     }
-    100% {
-        box-shadow: 0 2px 5px rgba(40, 167, 69, 0.3);
+    .stat-card .stat-value {
+        font-size: 2.5em;
+        font-weight: bold;
     }
-}
-
-/* Обновленные стили для верхней строки */
-.lesson-time {
-    font-weight: bold;
-    color: #667eea;
-    font-size: 1rem;
-}
-
-.lesson-duration {
-    font-size: 0.85rem;
-    color: #6c757d;
-}
-
-.lesson-duration i {
-    margin-right: 2px;
-}
-
-/* Остальные стили остаются без изменений */
-.lesson-item {
-    background: #f8f9fa;
-    border-left: 4px solid #667eea;
-    border-radius: 8px;
-    padding: 12px 15px;
-    margin-bottom: 10px;
-    cursor: pointer;
-    transition: all 0.3s;
-    position: relative;
-    z-index: 1;
-}
-
-.lesson-item:hover {
-    z-index: 1000;
-    background: #e9ecef;
-    transform: translateX(5px);
-}
-
-.lesson-item.completed {
-    border-left-color: #28a745;
-    background: #f0fff4;
-}
-
-.lesson-item.cancelled {
-    border-left-color: #dc3545;
-    background: #fff5f5;
-    opacity: 0.7;
-}
-
-.lesson-student {
-    font-weight: 600;
-    font-size: 1rem;
-}
-
-.lesson-diary {
-    font-size: 0.8rem;
-    color: #666;
-    margin-top: 2px;
-}
-
-/* Стили для кнопок действий */
-.lesson-actions {
-    margin-left: 10px;
-    min-width: 30px;
-}
-
-.lesson-actions .btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 6px;
-    transition: all 0.2s;
-    font-size: 0.8rem;
-    padding: 0;
-}
-
-.lesson-actions .btn:hover {
-    transform: scale(1.1);
-}
-
-.lesson-actions .btn-outline-primary:hover {
-    background-color: #667eea;
-    color: white;
-    border-color: #667eea;
-}
-
-.lesson-actions .btn-outline-info:hover {
-    background-color: #17a2b8;
-    color: white;
-    border-color: #17a2b8;
-}
-
-.lesson-actions .btn-outline-success:hover {
-    background-color: #28a745;
-    color: white;
-    border-color: #28a745;
-}
-
-/* Стили для категорий */
-.lesson-categories {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 2px;
-    margin-top: 4px;
-}
-
-.category-badge {
-    font-size: 0.7rem;
-    padding: 2px 8px;
-    border-radius: 12px;
-    background-color: #f0f0f0;
-    border-left: 3px solid;
-    display: inline-block;
-    margin-right: 4px;
-    margin-bottom: 2px;
-    transition: all 0.2s;
-}
-
-.category-badge:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-/* Стили для тултипа */
-.lesson-tooltip {
-    display: none;
-    position: absolute;
-    background: white;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 10px;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-    z-index: 9999;
-    max-width: 300px;
-    min-width: 200px;
-    pointer-events: none;
-    top: 100%;
-    left: 0;
-    margin-top: 5px;
-}
-
-.lesson-tooltip::before {
-    content: '';
-    position: absolute;
-    top: -8px;
-    left: 20px;
-    width: 0;
-    height: 0;
-    border-left: 8px solid transparent;
-    border-right: 8px solid transparent;
-    border-bottom: 8px solid white;
-    filter: drop-shadow(0 -2px 2px rgba(0,0,0,0.1));
-}
-
-.lesson-item:hover .lesson-tooltip {
-    display: block;
-}
-
-/* Адаптивность для мобильных */
-@media (max-width: 768px) {
-    .lesson-item .d-flex {
-        flex-direction: column;
+    .stat-card .stat-label {
+        font-size: 0.9em;
+        opacity: 0.9;
+    }
+    .schedule-day {
+        background: white;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .schedule-day h4 {
+        color: #333;
+        border-bottom: 2px solid #f0f0f0;
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+    }
+    .lesson-item {
+        background: #f8f9fa;
+        border-left: 4px solid #667eea;
+        border-radius: 8px;
+        padding: 12px 15px;
+        margin-bottom: 10px;
+        cursor: pointer;
+        transition: all 0.3s;
+        position: relative;
+        z-index: 1;
+    }
+    .lesson-item:hover {
+        z-index: 1000;
+        background: #e9ecef;
+        transform: translateX(5px);
+    }
+    .lesson-item.completed {
+        border-left-color: #28a745;
+        background: #f0fff4;
+    }
+    .lesson-item.cancelled {
+        border-left-color: #dc3545;
+        background: #fff5f5;
+        opacity: 0.7;
+    }
+    .lesson-item .lesson-time {
+        font-weight: bold;
+        color: #667eea;
+        font-size: 1rem;
+    }
+    .lesson-item .lesson-student {
+        font-weight: 600;
+        font-size: 1rem;
+    }
+    .lesson-item .lesson-diary {
+        font-size: 0.85em;
+        color: #666;
+    }
+    .lesson-tooltip {
+        display: none;
+        position: absolute;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 10px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        z-index: 9999;
+        max-width: 300px;
+        min-width: 200px;
+        pointer-events: none;
+        top: 100%;
+        left: 0;
+        margin-top: 5px;
+    }
+    .lesson-tooltip::before {
+        content: '';
+        position: absolute;
+        top: -8px;
+        left: 20px;
+        width: 0;
+        height: 0;
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+        border-bottom: 8px solid white;
+        filter: drop-shadow(0 -2px 2px rgba(0,0,0,0.1));
+    }
+    .lesson-item:hover .lesson-tooltip {
+        display: block;
+    }
+    .filter-panel {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .btn-filter {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 10px 20px;
+        transition: all 0.3s;
+    }
+    .btn-filter:hover {
+        transform: translateY(-2px);
+        color: white;
+    }
+    .badge-label {
+        background: #e9ecef;
+        color: #495057;
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 0.85em;
+        margin-right: 5px;
+        cursor: pointer;
+    }
+    .badge-label.selected {
+        background: #667eea;
+        color: white;
     }
     
+    /* Стили для навигации по неделям */
+    .week-navigation {
+        background: white;
+        border-radius: 15px;
+        padding: 15px 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .btn-group .btn-outline-primary {
+        border-color: #dee2e6;
+        color: #495057;
+    }
+    
+    .btn-group .btn-outline-primary:hover {
+        background: #f8f9fa;
+        color: #667eea;
+        border-color: #667eea;
+    }
+    
+    .btn-group .btn-outline-primary.active {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+    }
+    
+    .current-week-badge {
+        background: #28a745;
+        color: white;
+        font-size: 0.75rem;
+        padding: 2px 8px;
+        border-radius: 12px;
+        margin-left: 8px;
+    }
+    
+    /* Стили для плашки оплачено */
+    .paid-badge {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        box-shadow: 0 2px 5px rgba(40, 167, 69, 0.3);
+        animation: pulse 2s infinite;
+    }
+    
+    .paid-badge i {
+        font-size: 0.8rem;
+    }
+    
+    @keyframes pulse {
+        0% {
+            box-shadow: 0 2px 5px rgba(40, 167, 69, 0.3);
+        }
+        50% {
+            box-shadow: 0 2px 10px rgba(40, 167, 69, 0.5);
+        }
+        100% {
+            box-shadow: 0 2px 5px rgba(40, 167, 69, 0.3);
+        }
+    }
+    
+    .lesson-duration {
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+    
+    .lesson-duration i {
+        margin-right: 2px;
+    }
+    
+    .lesson-categories {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2px;
+        margin-top: 4px;
+    }
+    
+    .category-badge {
+        font-size: 0.7rem;
+        padding: 2px 8px;
+        border-radius: 12px;
+        background-color: #f0f0f0;
+        border-left: 3px solid;
+        display: inline-block;
+        margin-right: 4px;
+        margin-bottom: 2px;
+        transition: all 0.2s;
+    }
+    
+    .category-badge:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    /* Стили для кнопок действий */
     .lesson-actions {
-        flex-direction: row !important;
-        margin-left: 0;
-        margin-top: 10px;
-        width: 100%;
-        justify-content: flex-end;
+        margin-left: 10px;
+        min-width: 70px;
     }
     
     .lesson-actions .btn {
-        width: 36px !important;
-        height: 36px !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        transition: all 0.2s;
+        font-size: 0.8rem;
+        padding: 0;
     }
     
-    .lesson-tooltip {
-        max-width: 250px;
-        left: 50%;
-        transform: translateX(-50%);
+    .lesson-actions .btn:hover {
+        transform: scale(1.05);
     }
     
-    .lesson-tooltip::before {
-        left: 50%;
-        transform: translateX(-50%);
+    .lesson-actions .btn-outline-primary:hover {
+        background-color: #667eea;
+        color: white;
+        border-color: #667eea;
     }
-}
+    
+    .lesson-actions .btn-outline-info:hover {
+        background-color: #17a2b8;
+        color: white;
+        border-color: #17a2b8;
+    }
+    
+    .lesson-actions .btn-outline-success:hover {
+        background-color: #28a745;
+        color: white;
+        border-color: #28a745;
+    }
+    
+    .lesson-actions .btn-outline-warning:hover {
+        background-color: #ffc107;
+        color: #333;
+        border-color: #ffc107;
+    }
+    
+    /* Для сеточного варианта */
+    .lesson-actions .row {
+        margin: 0 -2px;
+    }
+    
+    .lesson-actions .col-6 {
+        padding: 0 2px;
+    }
+    
+    .lesson-actions .btn.w-100 {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    /* Адаптивность для мобильных */
+    @media (max-width: 768px) {
+        .week-navigation .d-flex {
+            flex-direction: column;
+            gap: 10px;
+        }
         
-    </style>
+        .btn-group {
+            width: 100%;
+        }
+        
+        .btn-group .btn {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .lesson-item .d-flex {
+            flex-direction: column;
+        }
+        
+        .lesson-actions {
+            margin-left: 0;
+            margin-top: 10px;
+            width: 100%;
+        }
+        
+        .lesson-actions .row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        
+        .lesson-actions .col-6 {
+            flex: 0 0 calc(50% - 2px);
+            max-width: calc(50% - 2px);
+        }
+        
+        .lesson-actions .btn {
+            font-size: 0.7rem;
+            padding: 4px 0;
+        }
+        
+        .lesson-tooltip {
+            max-width: 250px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .lesson-tooltip::before {
+            left: 50%;
+            transform: translateX(-50%);
+        }
+    }
+</style>
 </head>
 <body>
     <?php include 'menu.php'; ?>
@@ -933,42 +963,69 @@ foreach ($schedule as $lesson) {
                             <!-- Кнопки действий -->
 
                             
-                            <div class="lesson-actions d-flex flex-column gap-1" onclick="event.stopPropagation()">
-                                    <!-- Новая кнопка информации об ученике -->
-                                <a href="students.php?action=view&id=<?php echo $lesson['student_id']; ?>" 
-                                class="btn btn-sm btn-outline-info p-1" 
-                                style="width: 30px; height: 30px;"
-                                data-bs-toggle="tooltip" 
-                                title="Информация об ученике">
-                                    <i class="bi bi-person"></i>
-                                </a>
-                                <a href="lessons.php?diary_id=<?php echo $lesson['diary_id']; ?>" 
-                                   class="btn btn-sm btn-outline-primary p-1" 
-                                   style="width: 30px; height: 30px;"
-                                   data-bs-toggle="tooltip" 
-                                   title="Перейти к занятиям дневника">
-                                    <i class="bi bi-calendar-check"></i>
-                                </a>
-                                
-                                <a href="private_diary.php?id=<?php echo $lesson['diary_id']; ?>" 
-                                   class="btn btn-sm btn-outline-info p-1" 
-                                   style="width: 30px; height: 30px;"
-                                   data-bs-toggle="tooltip" 
-                                   title="Детальная информация о дневнике">
-                                    <i class="bi bi-info-circle"></i>
-                                </a>
-                                
-                                <?php if ($hasPublicLink): ?>
-                                    <a href="public_diary.php?token=<?php echo $diaryInfo['public_link']; ?>" 
-                                       target="_blank"
-                                       class="btn btn-sm btn-outline-success p-1" 
-                                       style="width: 30px; height: 30px;"
-                                       data-bs-toggle="tooltip" 
-                                       title="Публичная версия дневника">
-                                        <i class="bi bi-link"></i>
-                                    </a>
-                                <?php endif; ?>
-                            </div>
+<!-- Кнопки действий (сетка 2x2) -->
+<div class="lesson-actions" onclick="event.stopPropagation()">
+    <div class="row g-1">
+        <div class="col-6">
+            <a href="lessons.php?diary_id=<?php echo $lesson['diary_id']; ?>" 
+               class="btn btn-sm btn-outline-primary w-100 p-1" 
+               style="height: 30px;"
+               data-bs-toggle="tooltip" 
+               title="Занятия дневника">
+                <i class="bi bi-calendar-check"></i>
+            </a>
+        </div>
+        <div class="col-6">
+            <a href="students.php?action=view&id=<?php echo $lesson['student_id']; ?>" 
+               class="btn btn-sm btn-outline-info w-100 p-1" 
+               style="height: 30px;"
+               data-bs-toggle="tooltip" 
+               title="Ученик">
+                <i class="bi bi-person"></i>
+            </a>
+        </div>
+        <div class="col-6">
+            <a href="private_diary.php?id=<?php echo $lesson['diary_id']; ?>" 
+               class="btn btn-sm btn-outline-info w-100 p-1" 
+               style="height: 30px;"
+               data-bs-toggle="tooltip" 
+               title="Дневник">
+                <i class="bi bi-info-circle"></i>
+            </a>
+        </div>
+        <div class="col-6">
+<a href="lessons.php?copy=1&id=<?php echo $lesson['id']; ?>&diary_id=<?php echo $lesson['diary_id']; ?>" 
+   class="btn btn-sm btn-outline-success w-100 p-1" 
+   style="width: 30px; height: 30px;"
+   data-bs-toggle="tooltip" 
+   title="Создать копию занятия и перейти к редактированию"
+   onclick="return confirm('Создать копию этого занятия и перейти к редактированию?')">
+    <i class="bi bi-files"></i>
+</a>
+        </div>
+        <div class="col-6">
+            <a href="lessons.php?action=edit&id=<?php echo $lesson['id']; ?>&diary_id=<?php echo $lesson['diary_id']; ?>" 
+               class="btn btn-sm btn-outline-warning w-100 p-1" 
+               style="height: 30px;"
+               data-bs-toggle="tooltip" 
+               title="Редактировать">
+                <i class="bi bi-pencil"></i>
+            </a>
+        </div>
+        <?php if ($hasPublicLink): ?>
+            <div class="col-6">
+                <a href="public_diary.php?token=<?php echo $diaryInfo['public_link']; ?>" 
+                   target="_blank"
+                   class="btn btn-sm btn-outline-success w-100 p-1" 
+                   style="height: 30px;"
+                   data-bs-toggle="tooltip" 
+                   title="Публичная ссылка">
+                    <i class="bi bi-link"></i>
+                </a>
+            </div>
+        <?php endif; ?>
+    </div>
+</div>
                         </div>
                         
                         <!-- Подсказка при наведении -->
@@ -1057,6 +1114,7 @@ foreach ($schedule as $lesson) {
             checkbox.checked = !checkbox.checked;
             document.getElementById('filterForm').submit();
         }
+
     </script>
 </body>
 </html>
