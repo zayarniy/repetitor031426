@@ -670,13 +670,481 @@ if (isset($_GET['copy']) && $lessonId) {
             transform: translateX(-50%);
         }
     }
+
+    /* Mobile First - Статистика Grid */
+.stats-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 16px;
+    padding: 14px 8px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #667eea;
+    line-height: 1.2;
+    margin-bottom: 4px;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Доход - Grid */
+.income-container {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.income-card {
+    border-radius: 16px;
+    padding: 16px 12px;
+    text-align: center;
+    color: white;
+}
+
+.income-card.potential {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+}
+
+.income-card.paid {
+    background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+}
+
+.income-card .stat-value {
+    color: white;
+    font-size: 1.6rem;
+    margin-bottom: 4px;
+}
+
+.income-card .stat-label {
+    color: rgba(255,255,255,0.9);
+    font-size: 0.85rem;
+}
+
+/* Tablet (от 600px) */
+@media (min-width: 600px) {
+    .stats-container {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 15px;
+    }
+    
+    .stat-card {
+        padding: 16px 10px;
+    }
+    
+    .stat-value {
+        font-size: 1.8rem;
+    }
+    
+    .income-container {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+    }
+}
+
+/* Desktop (от 992px) */
+@media (min-width: 992px) {
+    .stats-container {
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .stat-card {
+        padding: 20px;
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+    }
+    
+    .stat-label {
+        font-size: 0.85rem;
+    }
+    
+    .income-container {
+        gap: 20px;
+    }
+    
+    .income-card {
+        padding: 24px 20px;
+    }
+    
+    .income-card .stat-value {
+        font-size: 2rem;
+    }
+}
+
+/* Фильтры - Mobile First */
+.filters-container {
+    margin-bottom: 20px;
+    width: 100%;
+}
+
+.filters-toggle-btn {
+    width: 100%;
+    background: white;
+    border: none;
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #333;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: all 0.3s;
+}
+
+.filters-toggle-btn:hover {
+    background: #f8f9fa;
+}
+
+.filters-toggle-btn i:first-child {
+    font-size: 1.2rem;
+    margin-right: 8px;
+    color: #667eea;
+}
+
+.toggle-icon {
+    transition: transform 0.3s;
+}
+
+.filters-toggle-btn.active .toggle-icon {
+    transform: rotate(180deg);
+}
+
+.filter-panel {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    margin-top: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.filters-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.filter-item {
+    margin-bottom: 0;
+}
+
+.filter-item.full-width {
+    grid-column: 1 / -1;
+    margin-bottom: 12px;
+}
+
+.form-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #666;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.form-select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    background-color: white;
+    transition: all 0.2s;
+}
+
+.form-select:focus {
+    border-color: #667eea;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Метки */
+.labels-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.badge-label {
+    background: #f0f2f5;
+    color: #495057;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+}
+
+.badge-label:hover {
+    background: #e4e6e9;
+    transform: translateY(-1px);
+}
+
+.badge-label.selected {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+/* Кнопки действий */
+.filter-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.btn-filter {
+    flex: 2;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 12px;
+    font-weight: 500;
+    transition: all 0.3s;
+}
+
+.btn-filter:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-outline-secondary {
+    flex: 1;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 10px;
+    padding: 12px;
+    color: #6c757d;
+    transition: all 0.3s;
+}
+
+.btn-outline-secondary:hover {
+    background: #f8f9fa;
+    border-color: #667eea;
+    color: #667eea;
+}
+
+/* Tablet (от 600px) */
+@media (min-width: 600px) {
+    .filters-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 15px;
+    }
+    
+    .filter-panel {
+        padding: 20px;
+    }
+    
+    .filter-actions {
+        justify-content: flex-end;
+    }
+    
+    .btn-filter {
+        width: auto;
+        min-width: 150px;
+    }
+    
+    .btn-outline-secondary {
+        width: auto;
+        min-width: 100px;
+    }
+}
+
+/* Desktop (от 992px) */
+@media (min-width: 992px) {
+    .filters-toggle-btn {
+        display: none;
+    }
+    
+    .filter-panel {
+        display: block !important;
+        padding: 20px;
+        margin-top: 0;
+    }
+    
+    .filters-grid {
+        grid-template-columns: repeat(5, 1fr);
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+    
+    .filter-item.full-width {
+        grid-column: 1 / -1;
+    }
+    
+    .filter-actions {
+        justify-content: flex-start;
+    }
+}
 </style>
 </head>
 <body>
     <?php include 'menu.php'; ?>
     
     <div class="container-fluid py-4">
-        <!-- Заголовок и навигация по неделям -->
+<!-- Доход - Mobile First (Grid вариант) -->
+<div class="income-container">
+    <div class="income-card potential">
+        <div class="stat-value"><?php echo number_format($income['potential'], 0, ',', ' '); ?> ₽</div>
+        <div class="stat-label">Возможный доход за неделю</div>
+    </div>
+    <div class="income-card paid">
+        <div class="stat-value"><?php echo number_format($income['paid'], 0, ',', ' '); ?> ₽</div>
+        <div class="stat-label">Полученный доход за неделю</div>
+    </div>
+</div>
+        
+        <!-- Статистика - Mobile First (Grid вариант) -->
+<div class="stats-container">
+    <div class="stat-card">
+        <div class="stat-value"><?php echo $activeStudents; ?></div>
+        <div class="stat-label">Активных учеников</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value"><?php echo $weeklyLessons; ?></div>
+        <div class="stat-label">Занятий на неделю</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value"><?php echo $weeklyHours; ?> ч</div>
+        <div class="stat-label">Часов в неделю</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value"><?php echo $todayLessons; ?></div>
+        <div class="stat-label">Уроков сегодня</div>
+    </div>
+</div>
+
+
+        
+       <!-- Фильтры - Mobile First -->
+<div class="filters-container">
+    <button class="filters-toggle-btn" type="button" id="filtersToggle">
+        <i class="bi bi-funnel"></i> Фильтры
+        <i class="bi bi-chevron-down toggle-icon"></i>
+    </button>
+    
+    <div class="filter-panel" id="filterPanel" style="display: none;">
+        <form method="GET" action="" id="filterForm">
+            <?php if ($weekOffset != 0): ?>
+                <input type="hidden" name="week_offset" value="<?php echo $weekOffset; ?>">
+            <?php endif; ?>
+            <?php if (!empty($selectedDate)): ?>
+                <input type="hidden" name="week_date" value="<?php echo $selectedDate; ?>">
+            <?php endif; ?>
+            
+            <!-- Фильтры - сетка 2x2 на мобильных -->
+            <div class="filters-grid">
+                <div class="filter-item">
+                    <label class="form-label">Категория меток</label>
+                    <select name="category" class="form-select" onchange="this.form.submit()">
+                        <option value="">Все категории</option>
+                        <?php foreach ($categories as $category): ?>
+                            <option value="<?php echo $category['id']; ?>" <?php echo $selectedCategory == $category['id'] ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($category['name']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                
+                <div class="filter-item">
+                    <label class="form-label">Класс</label>
+                    <select name="class" class="form-select" onchange="this.form.submit()">
+                        <option value="">Все классы</option>
+                        <?php foreach ($classes as $class): ?>
+                            <option value="<?php echo htmlspecialchars($class['class']); ?>" <?php echo $selectedClass == $class['class'] ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($class['class']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                
+                <div class="filter-item">
+                    <label class="form-label">Статус ученика</label>
+                    <select name="status" class="form-select" onchange="this.form.submit()">
+                        <option value="active" <?php echo $statusFilter == 'active' ? 'selected' : ''; ?>>Активные</option>
+                        <option value="inactive" <?php echo $statusFilter == 'inactive' ? 'selected' : ''; ?>>Неактивные</option>
+                        <option value="all" <?php echo $statusFilter == 'all' ? 'selected' : ''; ?>>Все</option>
+                    </select>
+                </div>
+                
+                <div class="filter-item">
+                    <label class="form-label">Статус урока</label>
+                    <select name="lesson_status" class="form-select" onchange="this.form.submit()">
+                        <option value="all" <?php echo $lessonStatusFilter == 'all' ? 'selected' : ''; ?>>Все</option>
+                        <option value="completed" <?php echo $lessonStatusFilter == 'completed' ? 'selected' : ''; ?>>Проведенные</option>
+                        <option value="not_completed" <?php echo $lessonStatusFilter == 'not_completed' ? 'selected' : ''; ?>>Не проведенные</option>
+                        <option value="cancelled" <?php echo $lessonStatusFilter == 'cancelled' ? 'selected' : ''; ?>>Отмененные</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="filter-item full-width">
+                <label class="form-label">Режим фильтра меток</label>
+                <select name="label_mode" class="form-select" onchange="this.form.submit()">
+                    <option value="or" <?php echo $labelFilterMode == 'or' ? 'selected' : ''; ?>>ИЛИ (любая метка)</option>
+                    <option value="and" <?php echo $labelFilterMode == 'and' ? 'selected' : ''; ?>>И (все метки)</option>
+                </select>
+            </div>
+            
+            <div class="filter-item full-width">
+                <label class="form-label">Метки</label>
+                <div class="labels-container">
+                    <?php foreach ($labels as $label): ?>
+                        <span class="badge-label <?php echo in_array($label['id'], $selectedLabels) ? 'selected' : ''; ?>" 
+                              onclick="toggleLabel(<?php echo $label['id']; ?>)">
+                            <?php echo htmlspecialchars($label['name']); ?>
+                        </span>
+                        <input type="checkbox" name="labels[]" value="<?php echo $label['id']; ?>" 
+                               id="label_<?php echo $label['id']; ?>" 
+                               <?php echo in_array($label['id'], $selectedLabels) ? 'checked' : ''; ?> 
+                               style="display: none;">
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            
+            <div class="filter-actions">
+                <button type="submit" class="btn btn-filter">Применить фильтры</button>
+                <a href="dashboard.php<?php echo $weekOffset != 0 ? '?week_offset=' . $weekOffset : ''; ?>" class="btn btn-outline-secondary">Сбросить</a>
+            </div>
+        </form>
+    </div>
+</div>
+            <!-- Заголовок и навигация по неделям -->
         <div class="week-navigation">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                 <h4 class="mb-0"><i class="bi bi-calendar-week"></i> Период:</h4>
@@ -708,142 +1176,7 @@ if (isset($_GET['copy']) && $lessonId) {
                     </a>
                 </div>
             </div>
-        </div>
-        
-        <!-- Статистика -->
-        <div class="row">
-            <div class="col-md-3">
-                <div class="stat-card">
-                    <div class="stat-value"><?php echo $activeStudents; ?></div>
-                    <div class="stat-label">Активных учеников</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card">
-                    <div class="stat-value"><?php echo $weeklyLessons; ?></div>
-                    <div class="stat-label">Занятий на неделю</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card">
-                    <div class="stat-value"><?php echo $weeklyHours; ?> ч</div>
-                    <div class="stat-label">Часов в неделю</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card">
-                    <div class="stat-value"><?php echo $todayLessons; ?></div>
-                    <div class="stat-label">Уроков сегодня</div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Доход -->
-        <div class="row mb-4">
-            <div class="col-md-6">
-                <div class="stat-card" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
-                    <div class="stat-value"><?php echo number_format($income['potential'], 0, ',', ' '); ?> ₽</div>
-                    <div class="stat-label">Возможный доход за неделю</div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="stat-card" style="background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);">
-                    <div class="stat-value"><?php echo number_format($income['paid'], 0, ',', ' '); ?> ₽</div>
-                    <div class="stat-label">Полученный доход за неделю</div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Фильтры -->
-        <div class="filter-panel">
-            <form method="GET" action="" id="filterForm">
-                <?php if ($weekOffset != 0): ?>
-                    <input type="hidden" name="week_offset" value="<?php echo $weekOffset; ?>">
-                <?php endif; ?>
-                <?php if (!empty($selectedDate)): ?>
-                    <input type="hidden" name="week_date" value="<?php echo $selectedDate; ?>">
-                <?php endif; ?>
-                
-                <div class="row">
-                    <div class="col-md-3 mb-3">
-                        <label class="form-label">Категория меток</label>
-                        <select name="category" class="form-select" onchange="this.form.submit()">
-                            <option value="">Все категории</option>
-                            <?php foreach ($categories as $category): ?>
-                                <option value="<?php echo $category['id']; ?>" <?php echo $selectedCategory == $category['id'] ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($category['name']); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    
-                    <div class="col-md-3 mb-3">
-                        <label class="form-label">Класс</label>
-                        <select name="class" class="form-select" onchange="this.form.submit()">
-                            <option value="">Все классы</option>
-                            <?php foreach ($classes as $class): ?>
-                                <option value="<?php echo htmlspecialchars($class['class']); ?>" <?php echo $selectedClass == $class['class'] ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($class['class']); ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                    
-                    <div class="col-md-2 mb-3">
-                        <label class="form-label">Статус ученика</label>
-                        <select name="status" class="form-select" onchange="this.form.submit()">
-                            <option value="active" <?php echo $statusFilter == 'active' ? 'selected' : ''; ?>>Активные</option>
-                            <option value="inactive" <?php echo $statusFilter == 'inactive' ? 'selected' : ''; ?>>Неактивные</option>
-                            <option value="all" <?php echo $statusFilter == 'all' ? 'selected' : ''; ?>>Все</option>
-                        </select>
-                    </div>
-                    
-                    <div class="col-md-2 mb-3">
-                        <label class="form-label">Статус урока</label>
-                        <select name="lesson_status" class="form-select" onchange="this.form.submit()">
-                            <option value="all" <?php echo $lessonStatusFilter == 'all' ? 'selected' : ''; ?>>Все</option>
-                            <option value="completed" <?php echo $lessonStatusFilter == 'completed' ? 'selected' : ''; ?>>Проведенные</option>
-                            <option value="not_completed" <?php echo $lessonStatusFilter == 'not_completed' ? 'selected' : ''; ?>>Не проведенные</option>
-                            <option value="cancelled" <?php echo $lessonStatusFilter == 'cancelled' ? 'selected' : ''; ?>>Отмененные</option>
-                        </select>
-                    </div>
-                    
-                    <div class="col-md-2 mb-3">
-                        <label class="form-label">Режим фильтра</label>
-                        <select name="label_mode" class="form-select" onchange="this.form.submit()">
-                            <option value="or" <?php echo $labelFilterMode == 'or' ? 'selected' : ''; ?>>ИЛИ (любая метка)</option>
-                            <option value="and" <?php echo $labelFilterMode == 'and' ? 'selected' : ''; ?>>И (все метки)</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div class="row">
-                    <div class="col-12">
-                        <label class="form-label">Метки</label>
-                        <div>
-                            <?php foreach ($labels as $label): ?>
-                                <span class="badge-label <?php echo in_array($label['id'], $selectedLabels) ? 'selected' : ''; ?>" 
-                                      onclick="toggleLabel(<?php echo $label['id']; ?>)">
-                                    <?php echo htmlspecialchars($label['name']); ?>
-                                </span>
-                                <input type="checkbox" name="labels[]" value="<?php echo $label['id']; ?>" 
-                                       id="label_<?php echo $label['id']; ?>" 
-                                       <?php echo in_array($label['id'], $selectedLabels) ? 'checked' : ''; ?> 
-                                       style="display: none;">
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="row mt-3">
-                    <div class="col-12">
-                        <button type="submit" class="btn btn-filter">Применить фильтры</button>
-                        <a href="dashboard.php<?php echo $weekOffset != 0 ? '?week_offset=' . $weekOffset : ''; ?>" class="btn btn-outline-secondary ms-2">Сбросить</a>
-                    </div>
-                </div>
-            </form>
-        </div>
-        
+        </div>    
 <!-- Расписание на выбранную неделю -->
 <div class="row">
     <div class="col-12">
@@ -1114,7 +1447,43 @@ if (isset($_GET['copy']) && $lessonId) {
             checkbox.checked = !checkbox.checked;
             document.getElementById('filterForm').submit();
         }
-
+// Переключение панели фильтров
+document.addEventListener('DOMContentLoaded', function() {
+    const toggleBtn = document.getElementById('filtersToggle');
+    const filterPanel = document.getElementById('filterPanel');
+    
+    if (toggleBtn && filterPanel) {
+        // Проверяем, нужно ли показывать фильтры на десктопе
+        if (window.innerWidth >= 992) {
+            filterPanel.style.display = 'block';
+            toggleBtn.classList.add('active');
+        }
+        
+        toggleBtn.addEventListener('click', function() {
+            if (filterPanel.style.display === 'none' || filterPanel.style.display === '') {
+                filterPanel.style.display = 'block';
+                this.classList.add('active');
+            } else {
+                filterPanel.style.display = 'none';
+                this.classList.remove('active');
+            }
+        });
+        
+        // При изменении размера окна
+        window.addEventListener('resize', function() {
+            if (window.innerWidth >= 992) {
+                filterPanel.style.display = 'block';
+                toggleBtn.classList.add('active');
+            } else {
+                // Не скрываем автоматически на мобильных, сохраняем состояние пользователя
+                if (filterPanel.style.display !== 'block') {
+                    filterPanel.style.display = 'none';
+                    toggleBtn.classList.remove('active');
+                }
+            }
+        });
+    }
+});
     </script>
 </body>
 </html>
