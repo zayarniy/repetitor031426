@@ -1,8 +1,30 @@
 <?php
 require_once 'config.php';
 
+// Функция для логирования
+function logAuthAttempt($type, $email, $status, $message = '') {
+    $logFile = __DIR__ . '/auth_log.txt';
+    $timestamp = date('Y-m-d H:i:s');
+    $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
+    
+    $logEntry = sprintf(
+        "[%s] %s | IP: %s | Email: %s | Status: %s | Message: %s | User-Agent: %s\n",
+        $timestamp,
+        strtoupper($type),
+        $ip,
+        $email,
+        $status,
+        $message,
+        $userAgent
+    );
+    
+    file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
+}
+
 // Если уже авторизован, перенаправляем на дашборд
 if (isAuthenticated()) {
+    logAuthAttempt('REDIRECT', $_SESSION['username'] ?? 'unknown', 'ALREADY_AUTHENTICATED', 'Пользователь уже авторизован');
     header('Location: dashboard.php');
     exit();
 }
@@ -16,41 +38,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $email = trim($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';
         
-        // Специальный администратор для тестирования
-        if ($email === 'admin@example.com' && $password === '123') {
-            // Проверяем, существует ли такой пользователь в БД
-            $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ?");
-            $stmt->execute(['admin@example.com']);
-            $user = $stmt->fetch();
-            
-            if (!$user) {
-                // Создаем тестового администратора
-                $hashedPassword = password_hash('123', PASSWORD_DEFAULT);
-                $stmt = $pdo->prepare("INSERT INTO users (username, email, password_hash, first_name, last_name, is_admin) VALUES (?, ?, ?, ?, ?, ?)");
-                $stmt->execute(['admin', 'admin@example.com', $hashedPassword, 'Admin', 'User', 1]);
-                
-                $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ?");
-                $stmt->execute(['admin@example.com']);
-                $user = $stmt->fetch();
-            } else {
-                // Проверяем пароль
-                if (!password_verify('123', $user['password_hash'])) {
-                    // Обновляем пароль на 123
-                    $hashedPassword = password_hash('123', PASSWORD_DEFAULT);
-                    $stmt = $pdo->prepare("UPDATE users SET password_hash = ? WHERE email = ?");
-                    $stmt->execute([$hashedPassword, 'admin@example.com']);
-                }
-            }
-            
-            // Успешный вход
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['username'] = $user['username'];
-            $_SESSION['is_admin'] = $user['is_admin'];
-            
-            header('Location: dashboard.php');
-            exit();
-        } else {
-            // Обычная проверка для других пользователей
+        logAuthAttempt('ATTEMPT', $email, 'PENDING', 'Попытка входа');
+        
+        // Просто проверка логина и хешированного пароля
+        try {
             $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ? AND is_active = 1");
             $stmt->execute([$email]);
             $user = $stmt->fetch();
@@ -60,18 +51,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['username'] = $user['username'];
                 $_SESSION['is_admin'] = $user['is_admin'];
                 
+                logAuthAttempt('SUCCESS', $email, 'SUCCESS', "Пользователь {$user['username']} успешно вошел в систему");
+                
                 header('Location: dashboard.php');
                 exit();
             } else {
                 $error = 'Неверный email или пароль';
+                logAuthAttempt('FAILURE', $email, 'FAILED', 'Неверный email или пароль');
             }
+        } catch (PDOException $e) {
+            $error = 'Ошибка базы данных. Пожалуйста, попробуйте позже.';
+            logAuthAttempt('ERROR', $email, 'DB_ERROR', 'Ошибка базы данных: ' . $e->getMessage());
         }
     } elseif (isset($_POST['register'])) {
         // Заглушка для регистрации
-        $success = 'Функция регистрации временно недоступна. Используйте admin@example.com / 123';
+        $success = 'Функция регистрации временно недоступна.';
+        logAuthAttempt('REGISTER', $_POST['email'] ?? 'unknown', 'DISABLED', 'Попытка регистрации (функция отключена)');
     } elseif (isset($_POST['reset'])) {
         // Заглушка для восстановления пароля
         $success = 'Функция восстановления пароля временно недоступна.';
+        logAuthAttempt('RESET', $_POST['email'] ?? 'unknown', 'DISABLED', 'Попытка восстановления пароля (функция отключена)');
     }
 }
 ?>
