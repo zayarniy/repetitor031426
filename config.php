@@ -48,14 +48,28 @@ function requireAuth()
 }
 
 // Функция для получения текущего пользователя
-function getCurrentUser($pdo)
-{
-    if (!isset($_SESSION['user_id']))
+function getCurrentUser($pdo) {
+    if (!isset($_SESSION['user_id'])) {
         return null;
-
-    $stmt = $pdo->prepare("SELECT id, username, email, first_name, last_name, middle_name, phone, is_admin FROM users WHERE id = ?");
-    $stmt->execute([$_SESSION['user_id']]);
-    return $stmt->fetch();
+    }
+    
+    try {
+        $stmt = $pdo->prepare("SELECT id, username, email, first_name, last_name, middle_name, phone, is_admin FROM users WHERE id = ?");
+        $stmt->execute([$_SESSION['user_id']]);
+        $user = $stmt->fetch();
+        
+        if (!$user) {
+            // Пользователь не найден в базе, но есть в сессии - очищаем сессию
+            session_destroy();
+            return null;
+        }
+        
+        return $user;
+    } catch (PDOException $e) {
+        // Логируем ошибку, но возвращаем null
+        error_log("Error getting user: " . $e->getMessage());
+        return null;
+    }
 }
 
 

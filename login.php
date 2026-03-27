@@ -79,8 +79,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Вход в систему - Репетитор</title>
+    <title>Дневник репетитора - вход</title>
     <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+    <link rel="manifest" href="manifest.json">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {

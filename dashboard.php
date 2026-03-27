@@ -4,7 +4,13 @@ requireAuth();
 
 $currentUser = getCurrentUser($pdo);
 $userId = $currentUser['id'];
-
+// Проверка, что пользователь получен корректно
+if (!$currentUser || $userId == 0) {
+    // Если не удалось получить пользователя, выходим из системы
+    session_destroy();
+    header('Location: login.php');
+    exit();
+}
 // Обработка навигации по неделям
 $weekOffset = isset($_GET['week_offset']) ? intval($_GET['week_offset']) : 0;
 $selectedDate = isset($_GET['week_date']) ? $_GET['week_date'] : '';
@@ -319,7 +325,8 @@ if (isset($_GET['copy']) && $lessonId) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Дашборд - Дневник репетитора</title>
+    <title>Дневник репетитора</title>
+    <link rel="manifest" href="manifest.json">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <style>
     /* Ваши существующие стили */
