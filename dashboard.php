@@ -38,8 +38,7 @@ $weekEndDisplay = date('d.m.Y', strtotime($weekEnd));
 
 // Получение фильтров
 $selectedCategory = $_GET['category'] ?? '';
-$labelFilterMode = $_GET['label_mode'] ?? 'or';
-$selectedLabels = isset($_GET['labels']) ? (array)$_GET['labels'] : [];
+
 $selectedClass = $_GET['class'] ?? '';
 $statusFilter = $_GET['status'] ?? 'active';
 $lessonStatusFilter = $_GET['lesson_status'] ?? 'all';
@@ -49,24 +48,6 @@ $stmt = $pdo->prepare("SELECT * FROM categories WHERE user_id = ? OR user_id IS 
 $stmt->execute([$userId]);
 $categories = $stmt->fetchAll();
 
-// Получение меток по выбранной категории
-if ($selectedCategory) {
-    $stmt = $pdo->prepare("
-        SELECT l.* FROM labels l 
-        WHERE (l.user_id = ? OR l.user_id IS NULL) 
-        AND l.category_id = ? 
-        ORDER BY l.name
-    ");
-    $stmt->execute([$userId, $selectedCategory]);
-} else {
-    $stmt = $pdo->prepare("
-        SELECT l.* FROM labels l 
-        WHERE l.user_id = ? OR l.user_id IS NULL 
-        ORDER BY l.name
-    ");
-    $stmt->execute([$userId]);
-}
-$labels = $stmt->fetchAll();
 
 // Получение классов для фильтра
 $stmt = $pdo->prepare("SELECT DISTINCT class FROM students WHERE user_id = ? AND class IS NOT NULL AND class != '' ORDER BY class");
@@ -169,24 +150,6 @@ if ($selectedClass) {
     $query .= " AND s.class = :class";
 }
 
-// Фильтр по меткам
-if (!empty($selectedLabels)) {
-    $placeholders = implode(',', array_fill(0, count($selectedLabels), '?'));
-    if ($labelFilterMode === 'and') {
-        $query .= " AND l.id IN (
-            SELECT lesson_id FROM lesson_labels 
-            WHERE label_id IN ($placeholders)
-            GROUP BY lesson_id 
-            HAVING COUNT(DISTINCT label_id) = " . count($selectedLabels) . "
-        )";
-    } else {
-        $query .= " AND l.id IN (
-            SELECT DISTINCT lesson_id FROM lesson_labels 
-            WHERE label_id IN ($placeholders)
-        )";
-    }
-}
-
 $query .= " GROUP BY l.id ORDER BY l.lesson_date, l.start_time";
 
 // Подготавливаем и выполняем запрос
@@ -202,25 +165,6 @@ if ($selectedClass) {
 }
 
 $stmt->execute($params);
-
-// Если есть фильтр по меткам, выполняем запрос с дополнительными параметрами
-if (!empty($selectedLabels)) {
-    $stmt = $pdo->prepare($query);
-    $params = [
-        'user_id' => $userId,
-        'week_start' => $weekStart,
-        'week_end' => $weekEnd
-    ];
-    if ($selectedClass) {
-        $params['class'] = $selectedClass;
-    }
-    $index = 1;
-    foreach ($selectedLabels as $label) {
-        $params['label_' . $index] = $label;
-        $index++;
-    }
-    $stmt->execute($params);
-}
 
 $schedule = $stmt->fetchAll();
 
@@ -1087,17 +1031,6 @@ if (isset($_GET['copy']) && $lessonId) {
             
             <!-- Фильтры - сетка 2x2 на мобильных -->
             <div class="filters-grid">
-                <div class="filter-item">
-                    <label class="form-label">Категория меток</label>
-                    <select name="category" class="form-select" onchange="this.form.submit()">
-                        <option value="">Все категории</option>
-                        <?php foreach ($categories as $category): ?>
-                            <option value="<?php echo $category['id']; ?>" <?php echo $selectedCategory == $category['id'] ? 'selected' : ''; ?>>
-                                <?php echo htmlspecialchars($category['name']); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
                 
                 <div class="filter-item">
                     <label class="form-label">Класс</label>
@@ -1130,30 +1063,7 @@ if (isset($_GET['copy']) && $lessonId) {
                     </select>
                 </div>
             </div>
-            
-            <div class="filter-item full-width">
-                <label class="form-label">Режим фильтра меток</label>
-                <select name="label_mode" class="form-select" onchange="this.form.submit()">
-                    <option value="or" <?php echo $labelFilterMode == 'or' ? 'selected' : ''; ?>>ИЛИ (любая метка)</option>
-                    <option value="and" <?php echo $labelFilterMode == 'and' ? 'selected' : ''; ?>>И (все метки)</option>
-                </select>
-            </div>
-            
-            <div class="filter-item full-width">
-                <label class="form-label">Метки</label>
-                <div class="labels-container">
-                    <?php foreach ($labels as $label): ?>
-                        <span class="badge-label <?php echo in_array($label['id'], $selectedLabels) ? 'selected' : ''; ?>" 
-                              onclick="toggleLabel(<?php echo $label['id']; ?>)">
-                            <?php echo htmlspecialchars($label['name']); ?>
-                        </span>
-                        <input type="checkbox" name="labels[]" value="<?php echo $label['id']; ?>" 
-                               id="label_<?php echo $label['id']; ?>" 
-                               <?php echo in_array($label['id'], $selectedLabels) ? 'checked' : ''; ?> 
-                               style="display: none;">
-                    <?php endforeach; ?>
-                </div>
-            </div>
+        
             
             <div class="filter-actions">
                 <button type="submit" class="btn btn-filter">Применить фильтры</button>
@@ -1460,11 +1370,6 @@ if (isset($_GET['copy']) && $lessonId) {
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function toggleLabel(labelId) {
-            const checkbox = document.getElementById('label_' + labelId);
-            checkbox.checked = !checkbox.checked;
-            document.getElementById('filterForm').submit();
-        }
 // Переключение панели фильтров
 document.addEventListener('DOMContentLoaded', function() {
     const toggleBtn = document.getElementById('filtersToggle');
