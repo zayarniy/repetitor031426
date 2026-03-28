@@ -83,26 +83,37 @@ $activeStudents = $stmt->fetchColumn();
 $stmt = $pdo->prepare("
     SELECT COUNT(*) FROM lessons l
     JOIN students s ON l.student_id = s.id
-    WHERE s.user_id = ? AND l.lesson_date BETWEEN ? AND ? AND s.is_active = 1
+    WHERE s.user_id = ? AND l.lesson_date BETWEEN ? AND ? AND s.is_active = 1 AND l.is_cancelled = 0
 ");
 $stmt->execute([$userId, $weekStart, $weekEnd]);
 $weeklyLessons = $stmt->fetchColumn();
+
+
+//Отмененных занятий на выбранную неделю
+$stmt = $pdo->prepare("
+    SELECT COUNT(*) FROM lessons l
+    JOIN students s ON l.student_id = s.id
+    WHERE s.user_id = ? AND l.lesson_date BETWEEN ? AND ? AND s.is_active = 1 AND l.is_cancelled = 1
+");
+$stmt->execute([$userId, $weekStart, $weekEnd]);
+$weeklyCancelledLessons = $stmt->fetchColumn();
 
 // Часы в неделю
 $stmt = $pdo->prepare("
     SELECT COALESCE(SUM(duration), 0) / 60 FROM lessons l
     JOIN students s ON l.student_id = s.id
-    WHERE s.user_id = ? AND l.lesson_date BETWEEN ? AND ? AND s.is_active = 1
+    WHERE s.user_id = ? AND l.lesson_date BETWEEN ? AND ? AND s.is_active = 1 AND l.is_cancelled = 0
 ");
 $stmt->execute([$userId, $weekStart, $weekEnd]);
 $weeklyHours = round($stmt->fetchColumn(), 1);
+
 
 // Уроки сегодня (не зависит от выбранной недели)
 $today = date('Y-m-d');
 $stmt = $pdo->prepare("
     SELECT COUNT(*) FROM lessons l
     JOIN students s ON l.student_id = s.id
-    WHERE s.user_id = ? AND l.lesson_date = ? AND s.is_active = 1
+    WHERE s.user_id = ? AND l.lesson_date = ? AND s.is_active = 1 AND l.is_cancelled = 0
 ");
 $stmt->execute([$userId, $today]);
 $todayLessons = $stmt->fetchColumn();
@@ -329,142 +340,79 @@ if (isset($_GET['copy']) && $lessonId) {
     <link rel="manifest" href="manifest.json">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <style>
-    /* Ваши существующие стили */
-    .stat-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border-radius: 15px;
-        padding: 20px;
+    /* ===== ОСНОВНЫЕ СТИЛИ ===== */
+    
+    /* Mobile First - Статистика */
+    .stats-container {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
         margin-bottom: 20px;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 16px;
+        padding: 14px 8px;
+        text-align: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         transition: transform 0.3s;
     }
+    
     .stat-card:hover {
         transform: translateY(-5px);
     }
-    .stat-card .stat-value {
-        font-size: 2.5em;
-        font-weight: bold;
-    }
-    .stat-card .stat-label {
-        font-size: 0.9em;
-        opacity: 0.9;
-    }
-    .schedule-day {
-        background: white;
-        border-radius: 10px;
-        padding: 15px;
-        margin-bottom: 20px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    .schedule-day h4 {
-        color: #333;
-        border-bottom: 2px solid #f0f0f0;
-        padding-bottom: 10px;
-        margin-bottom: 15px;
-    }
-    .lesson-item {
-        background: #f8f9fa;
-        border-left: 4px solid #667eea;
-        border-radius: 8px;
-        padding: 12px 15px;
-        margin-bottom: 10px;
-        cursor: pointer;
-        transition: all 0.3s;
-        position: relative;
-        z-index: 1;
-    }
-    .lesson-item:hover {
-        z-index: 1000;
-        background: #e9ecef;
-        transform: translateX(5px);
-    }
-    .lesson-item.completed {
-        border-left-color: #28a745;
-        background: #f0fff4;
-    }
-    .lesson-item.cancelled {
-        border-left-color: #dc3545;
-        background: #fff5f5;
-        opacity: 0.7;
-    }
-    .lesson-item .lesson-time {
+    
+    .stat-value {
+        font-size: 1.5rem;
         font-weight: bold;
         color: #667eea;
-        font-size: 1rem;
+        line-height: 1.2;
+        margin-bottom: 4px;
     }
-    .lesson-item .lesson-student {
-        font-weight: 600;
-        font-size: 1rem;
-    }
-    .lesson-item .lesson-diary {
-        font-size: 0.85em;
+    
+    .stat-label {
+        font-size: 0.75rem;
         color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
-    .lesson-tooltip {
-        display: none;
-        position: absolute;
-        background: white;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        padding: 10px;
-        box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-        z-index: 9999;
-        max-width: 300px;
-        min-width: 200px;
-        pointer-events: none;
-        top: 100%;
-        left: 0;
-        margin-top: 5px;
-    }
-    .lesson-tooltip::before {
-        content: '';
-        position: absolute;
-        top: -8px;
-        left: 20px;
-        width: 0;
-        height: 0;
-        border-left: 8px solid transparent;
-        border-right: 8px solid transparent;
-        border-bottom: 8px solid white;
-        filter: drop-shadow(0 -2px 2px rgba(0,0,0,0.1));
-    }
-    .lesson-item:hover .lesson-tooltip {
-        display: block;
-    }
-    .filter-panel {
-        background: white;
-        border-radius: 15px;
-        padding: 20px;
+    
+    /* Доход */
+    .income-container {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
         margin-bottom: 20px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
-    .btn-filter {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 10px 20px;
-        transition: all 0.3s;
-    }
-    .btn-filter:hover {
-        transform: translateY(-2px);
-        color: white;
-    }
-    .badge-label {
-        background: #e9ecef;
-        color: #495057;
-        padding: 5px 10px;
-        border-radius: 20px;
-        font-size: 0.85em;
-        margin-right: 5px;
-        cursor: pointer;
-    }
-    .badge-label.selected {
-        background: #667eea;
+    
+    .income-card {
+        border-radius: 16px;
+        padding: 16px 12px;
+        text-align: center;
         color: white;
     }
     
-    /* Стили для навигации по неделям */
+    .income-card.potential {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    }
+    
+    .income-card.paid {
+        background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+    }
+    
+    .income-card .stat-value {
+        color: white;
+        font-size: 1.6rem;
+        margin-bottom: 4px;
+    }
+    
+    .income-card .stat-label {
+        color: rgba(255,255,255,0.9);
+        font-size: 0.85rem;
+    }
+    
+    /* Навигация по неделям */
     .week-navigation {
         background: white;
         border-radius: 15px;
@@ -484,12 +432,6 @@ if (isset($_GET['copy']) && $lessonId) {
         border-color: #667eea;
     }
     
-    .btn-group .btn-outline-primary.active {
-        background: #667eea;
-        color: white;
-        border-color: #667eea;
-    }
-    
     .current-week-badge {
         background: #28a745;
         color: white;
@@ -499,35 +441,236 @@ if (isset($_GET['copy']) && $lessonId) {
         margin-left: 8px;
     }
     
-    /* Стили для плашки оплачено */
-    .paid-badge {
-        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-        color: white;
-        padding: 4px 10px;
-        border-radius: 20px;
+    /* Фильтры - Mobile First */
+    .filters-container {
+        margin-bottom: 20px;
+        width: 100%;
+    }
+    
+    .filters-toggle-btn {
+        width: 100%;
+        background: white;
+        border: none;
+        border-radius: 12px;
+        padding: 14px 16px;
+        font-size: 1rem;
+        font-weight: 500;
+        color: #333;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        transition: all 0.3s;
+    }
+    
+    .filters-toggle-btn:hover {
+        background: #f8f9fa;
+    }
+    
+    .filters-toggle-btn i:first-child {
+        font-size: 1.2rem;
+        margin-right: 8px;
+        color: #667eea;
+    }
+    
+    .toggle-icon {
+        transition: transform 0.3s;
+    }
+    
+    .filters-toggle-btn.active .toggle-icon {
+        transform: rotate(180deg);
+    }
+    
+    .filter-panel {
+        background: white;
+        border-radius: 12px;
+        padding: 16px;
+        margin-top: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        animation: slideDown 0.3s ease-out;
+    }
+    
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .filters-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+    
+    .filter-item {
+        margin-bottom: 0;
+    }
+    
+    .filter-item.full-width {
+        grid-column: 1 / -1;
+        margin-bottom: 12px;
+    }
+    
+    .form-label {
         font-size: 0.75rem;
         font-weight: 600;
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        box-shadow: 0 2px 5px rgba(40, 167, 69, 0.3);
-        animation: pulse 2s infinite;
+        color: #666;
+        margin-bottom: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
     
-    .paid-badge i {
-        font-size: 0.8rem;
+    .form-select {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #e0e0e0;
+        border-radius: 10px;
+        font-size: 0.9rem;
+        background-color: white;
+        transition: all 0.2s;
     }
     
-    @keyframes pulse {
-        0% {
-            box-shadow: 0 2px 5px rgba(40, 167, 69, 0.3);
-        }
-        50% {
-            box-shadow: 0 2px 10px rgba(40, 167, 69, 0.5);
-        }
-        100% {
-            box-shadow: 0 2px 5px rgba(40, 167, 69, 0.3);
-        }
+    .form-select:focus {
+        border-color: #667eea;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    /* Метки */
+    .labels-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 8px;
+    }
+    
+    .badge-label {
+        background: #f0f2f5;
+        color: #495057;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        user-select: none;
+    }
+    
+    .badge-label:hover {
+        background: #e4e6e9;
+        transform: translateY(-1px);
+    }
+    
+    .badge-label.selected {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    /* Кнопки действий фильтров */
+    .filter-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 16px;
+    }
+    
+    .btn-filter {
+        flex: 2;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        padding: 12px;
+        font-weight: 500;
+        transition: all 0.3s;
+    }
+    
+    .btn-filter:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    
+    .btn-outline-secondary {
+        flex: 1;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 10px;
+        padding: 12px;
+        color: #6c757d;
+        transition: all 0.3s;
+    }
+    
+    .btn-outline-secondary:hover {
+        background: #f8f9fa;
+        border-color: #667eea;
+        color: #667eea;
+    }
+    
+    /* Расписание */
+    .schedule-day {
+        background: white;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .schedule-day h4 {
+        color: #333;
+        border-bottom: 2px solid #f0f0f0;
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+    }
+    
+    /* Карточка занятия */
+    .lesson-item {
+        background: #f8f9fa;
+        border-left: 4px solid #667eea;
+        border-radius: 8px;
+        padding: 12px 15px;
+        margin-bottom: 10px;
+        cursor: pointer;
+        transition: all 0.3s;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .lesson-item:hover {
+        z-index: 1000;
+        background: #e9ecef;
+        transform: translateX(5px);
+    }
+    
+    .lesson-item.completed {
+        border-left-color: #28a745;
+        background: #f0fff4;
+    }
+    
+    .lesson-item.cancelled {
+        border-left-color: #dc3545;
+        background: #fff5f5;
+        opacity: 0.7;
+    }
+    
+    .lesson-item .lesson-time {
+        font-weight: bold;
+        color: #667eea;
+        font-size: 1rem;
+    }
+    
+    .lesson-item .lesson-student {
+        font-weight: 600;
+        font-size: 1rem;
+    }
+    
+    .lesson-item .lesson-diary {
+        font-size: 0.85em;
+        color: #666;
     }
     
     .lesson-duration {
@@ -563,7 +706,67 @@ if (isset($_GET['copy']) && $lessonId) {
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     
-    /* Стили для кнопок действий */
+    /* Тултип */
+    .lesson-tooltip {
+        display: none;
+        position: absolute;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 10px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        z-index: 9999;
+        max-width: 300px;
+        min-width: 200px;
+        pointer-events: none;
+        top: 100%;
+        left: 0;
+        margin-top: 5px;
+    }
+    
+    .lesson-tooltip::before {
+        content: '';
+        position: absolute;
+        top: -8px;
+        left: 20px;
+        width: 0;
+        height: 0;
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+        border-bottom: 8px solid white;
+        filter: drop-shadow(0 -2px 2px rgba(0,0,0,0.1));
+    }
+    
+    .lesson-item:hover .lesson-tooltip {
+        display: block;
+    }
+    
+    /* Плашка оплачено */
+    .paid-badge {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        box-shadow: 0 2px 5px rgba(40, 167, 69, 0.3);
+        animation: pulse 2s infinite;
+    }
+    
+    .paid-badge i {
+        font-size: 0.8rem;
+    }
+    
+    @keyframes pulse {
+        0% { box-shadow: 0 2px 5px rgba(40, 167, 69, 0.3); }
+        50% { box-shadow: 0 2px 10px rgba(40, 167, 69, 0.5); }
+        100% { box-shadow: 0 2px 5px rgba(40, 167, 69, 0.3); }
+    }
+    
+    /* Кнопки действий на карточке занятия */
     .lesson-actions {
         margin-left: 10px;
         min-width: 70px;
@@ -607,22 +810,166 @@ if (isset($_GET['copy']) && $lessonId) {
         border-color: #ffc107;
     }
     
-    /* Для сеточного варианта */
-    .lesson-actions .row {
-        margin: 0 -2px;
+    /* Компактная статистика (скролл) */
+    .stats-scroll-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin-bottom: 20px;
+        scrollbar-width: thin;
     }
     
-    .lesson-actions .col-6 {
-        padding: 0 2px;
+    .stats-row-horizontal {
+        display: flex;
+        gap: 10px;
+        min-width: min-content;
+        padding-bottom: 5px;
     }
     
-    .lesson-actions .btn.w-100 {
+    .stat-card-compact {
+        flex-shrink: 0;
+        background: white;
+        border-radius: 16px;
+        padding: 12px 16px;
+        min-width: 90px;
+        text-align: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        transition: all 0.2s;
+    }
+    
+    .stat-card-compact .stat-value {
+        font-size: 1.4rem;
+        font-weight: bold;
+        color: #667eea;
+        line-height: 1.2;
+        margin-bottom: 4px;
         white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
     }
     
-    /* Адаптивность для мобильных */
+    .stat-card-compact .stat-label {
+        font-size: 0.7rem;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        white-space: nowrap;
+    }
+    
+    /* ===== АДАПТИВНОСТЬ ===== */
+    
+    /* Tablet (от 600px) */
+    @media (min-width: 600px) {
+        .stats-container {
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+        
+        .stat-card {
+            padding: 16px 10px;
+        }
+        
+        .stat-value {
+            font-size: 1.8rem;
+        }
+        
+        .income-container {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        
+        .filters-grid {
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+        
+        .filter-panel {
+            padding: 20px;
+        }
+        
+        .filter-actions {
+            justify-content: flex-end;
+        }
+        
+        .btn-filter {
+            width: auto;
+            min-width: 150px;
+        }
+        
+        .btn-outline-secondary {
+            width: auto;
+            min-width: 100px;
+        }
+        
+        .stats-scroll-container {
+            overflow-x: visible;
+        }
+        
+        .stats-row-horizontal {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+        }
+        
+        .stat-card-compact {
+            min-width: auto;
+        }
+    }
+    
+    /* Desktop (от 992px) */
+    @media (min-width: 992px) {
+        .stats-container {
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            padding: 20px;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+        }
+        
+        .stat-label {
+            font-size: 0.85rem;
+        }
+        
+        .income-container {
+            gap: 20px;
+        }
+        
+        .income-card {
+            padding: 24px 20px;
+        }
+        
+        .income-card .stat-value {
+            font-size: 2rem;
+        }
+        
+        .filters-toggle-btn {
+            display: none;
+        }
+        
+        .filter-panel {
+            display: block !important;
+            padding: 20px;
+            margin-top: 0;
+        }
+        
+        .filters-grid {
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .filter-item.full-width {
+            grid-column: 1 / -1;
+        }
+        
+        .filter-actions {
+            justify-content: flex-start;
+        }
+    }
+    
+    /* Мобильные устройства (до 768px) */
     @media (max-width: 768px) {
         .week-navigation .d-flex {
             flex-direction: column;
@@ -677,347 +1024,6 @@ if (isset($_GET['copy']) && $lessonId) {
             transform: translateX(-50%);
         }
     }
-
-    /* Mobile First - Статистика Grid */
-.stats-container {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-    margin-bottom: 20px;
-}
-
-.stat-card {
-    background: white;
-    border-radius: 16px;
-    padding: 14px 8px;
-    text-align: center;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-}
-
-.stat-value {
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: #667eea;
-    line-height: 1.2;
-    margin-bottom: 4px;
-}
-
-.stat-label {
-    font-size: 0.75rem;
-    color: #666;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-/* Доход - Grid */
-.income-container {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 12px;
-    margin-bottom: 20px;
-}
-
-.income-card {
-    border-radius: 16px;
-    padding: 16px 12px;
-    text-align: center;
-    color: white;
-}
-
-.income-card.potential {
-    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-}
-
-.income-card.paid {
-    background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
-}
-
-.income-card .stat-value {
-    color: white;
-    font-size: 1.6rem;
-    margin-bottom: 4px;
-}
-
-.income-card .stat-label {
-    color: rgba(255,255,255,0.9);
-    font-size: 0.85rem;
-}
-
-/* Tablet (от 600px) */
-@media (min-width: 600px) {
-    .stats-container {
-        grid-template-columns: repeat(4, 1fr);
-        gap: 15px;
-    }
-    
-    .stat-card {
-        padding: 16px 10px;
-    }
-    
-    .stat-value {
-        font-size: 1.8rem;
-    }
-    
-    .income-container {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 15px;
-    }
-}
-
-/* Desktop (от 992px) */
-@media (min-width: 992px) {
-    .stats-container {
-        gap: 20px;
-        margin-bottom: 30px;
-    }
-    
-    .stat-card {
-        padding: 20px;
-    }
-    
-    .stat-value {
-        font-size: 2rem;
-    }
-    
-    .stat-label {
-        font-size: 0.85rem;
-    }
-    
-    .income-container {
-        gap: 20px;
-    }
-    
-    .income-card {
-        padding: 24px 20px;
-    }
-    
-    .income-card .stat-value {
-        font-size: 2rem;
-    }
-}
-
-/* Фильтры - Mobile First */
-.filters-container {
-    margin-bottom: 20px;
-    width: 100%;
-}
-
-.filters-toggle-btn {
-    width: 100%;
-    background: white;
-    border: none;
-    border-radius: 12px;
-    padding: 14px 16px;
-    font-size: 1rem;
-    font-weight: 500;
-    color: #333;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    transition: all 0.3s;
-}
-
-.filters-toggle-btn:hover {
-    background: #f8f9fa;
-}
-
-.filters-toggle-btn i:first-child {
-    font-size: 1.2rem;
-    margin-right: 8px;
-    color: #667eea;
-}
-
-.toggle-icon {
-    transition: transform 0.3s;
-}
-
-.filters-toggle-btn.active .toggle-icon {
-    transform: rotate(180deg);
-}
-
-.filter-panel {
-    background: white;
-    border-radius: 12px;
-    padding: 16px;
-    margin-top: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    animation: slideDown 0.3s ease-out;
-}
-
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.filters-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-    margin-bottom: 12px;
-}
-
-.filter-item {
-    margin-bottom: 0;
-}
-
-.filter-item.full-width {
-    grid-column: 1 / -1;
-    margin-bottom: 12px;
-}
-
-.form-label {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #666;
-    margin-bottom: 4px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.form-select {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid #e0e0e0;
-    border-radius: 10px;
-    font-size: 0.9rem;
-    background-color: white;
-    transition: all 0.2s;
-}
-
-.form-select:focus {
-    border-color: #667eea;
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
-
-/* Метки */
-.labels-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 8px;
-}
-
-.badge-label {
-    background: #f0f2f5;
-    color: #495057;
-    padding: 6px 14px;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    cursor: pointer;
-    transition: all 0.2s;
-    user-select: none;
-}
-
-.badge-label:hover {
-    background: #e4e6e9;
-    transform: translateY(-1px);
-}
-
-.badge-label.selected {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-}
-
-/* Кнопки действий */
-.filter-actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 16px;
-}
-
-.btn-filter {
-    flex: 2;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    border-radius: 10px;
-    padding: 12px;
-    font-weight: 500;
-    transition: all 0.3s;
-}
-
-.btn-filter:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-}
-
-.btn-outline-secondary {
-    flex: 1;
-    background: white;
-    border: 1px solid #dee2e6;
-    border-radius: 10px;
-    padding: 12px;
-    color: #6c757d;
-    transition: all 0.3s;
-}
-
-.btn-outline-secondary:hover {
-    background: #f8f9fa;
-    border-color: #667eea;
-    color: #667eea;
-}
-
-/* Tablet (от 600px) */
-@media (min-width: 600px) {
-    .filters-grid {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 15px;
-    }
-    
-    .filter-panel {
-        padding: 20px;
-    }
-    
-    .filter-actions {
-        justify-content: flex-end;
-    }
-    
-    .btn-filter {
-        width: auto;
-        min-width: 150px;
-    }
-    
-    .btn-outline-secondary {
-        width: auto;
-        min-width: 100px;
-    }
-}
-
-/* Desktop (от 992px) */
-@media (min-width: 992px) {
-    .filters-toggle-btn {
-        display: none;
-    }
-    
-    .filter-panel {
-        display: block !important;
-        padding: 20px;
-        margin-top: 0;
-    }
-    
-    .filters-grid {
-        grid-template-columns: repeat(5, 1fr);
-        gap: 15px;
-        margin-bottom: 15px;
-    }
-    
-    .filter-item.full-width {
-        grid-column: 1 / -1;
-    }
-    
-    .filter-actions {
-        justify-content: flex-start;
-    }
-}
 </style>
 </head>
 <body>
@@ -1037,25 +1043,30 @@ if (isset($_GET['copy']) && $lessonId) {
 </div>
         
         <!-- Статистика - Mobile First (Grid вариант) -->
-<div class="stats-container">
-    <div class="stat-card">
-        <div class="stat-value"><?php echo $activeStudents; ?></div>
-        <div class="stat-label">Активных учеников</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-value"><?php echo $weeklyLessons; ?></div>
-        <div class="stat-label">Занятий на неделю</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-value"><?php echo $weeklyHours; ?> ч</div>
-        <div class="stat-label">Часов в неделю</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-value"><?php echo $todayLessons; ?></div>
-        <div class="stat-label">Уроков сегодня</div>
+<div class="stats-scroll-container">
+    <div class="stats-row-horizontal">
+        <div class="stat-card-compact">
+            <div class="stat-value"><?php echo $activeStudents; ?></div>
+            <div class="stat-label">Ученики</div>
+        </div>
+        <div class="stat-card-compact">
+            <div class="stat-value"><?php echo $weeklyLessons; ?></div>
+            <div class="stat-label">Занятий</div>
+        </div>
+        <div class="stat-card-compact">
+            <div class="stat-value"><?php echo $weeklyCancelledLessons; ?></div>
+            <div class="stat-label">Отменено</div>
+        </div>
+        <div class="stat-card-compact">
+            <div class="stat-value"><?php echo $weeklyHours; ?> ч</div>
+            <div class="stat-label">Часов</div>
+        </div>
+        <div class="stat-card-compact">
+            <div class="stat-value"><?php echo $todayLessons; ?></div>
+            <div class="stat-label">Сегодня</div>
+        </div>
     </div>
 </div>
-
 
         
        <!-- Фильтры - Mobile First -->
