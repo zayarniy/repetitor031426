@@ -210,10 +210,8 @@ if (isset($_GET['copy']) && $lessonId) {
         $sourceLesson = $stmt->fetch();
 
         if ($sourceLesson) {
-            $originalDateTime = date('Y-m-d', strtotime($sourceLesson['start_time']));
-            $newDate = date('Y-m-d', strtotime($originalDateTime . ' +7 days'));
-            // Создаем копию занятия (дата через 7 дней)
-            $newDate = date('Y-m-d', strtotime('+7 days'));
+            // Исправлено: берем дату из lesson_date, а не из start_time
+            $newDate = date('Y-m-d', strtotime($sourceLesson['lesson_date'] . ' +7 days'));
 
             $stmt = $pdo->prepare("
                 INSERT INTO lessons (
@@ -1107,7 +1105,8 @@ if (isset($_GET['copy']) && $lessonId) {
             </div>
             <div class="stat-card-compact">
                 <div class="stat-value">
-                    <?php echo $weeklyLessons - $weeklyCompletedLessons - $weeklyCancelledLessons; ?></div>
+                    <?php echo $weeklyLessons - $weeklyCompletedLessons - $weeklyCancelledLessons; ?>
+                </div>
                 <div class="stat-label">Осталось</div>
             </div>
             <div class="stat-card-compact">
