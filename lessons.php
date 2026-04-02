@@ -1704,7 +1704,7 @@ if (isset($_GET['delete']) && $lessonId) {
     </div>
 
     <!-- Модальное окно выбора тем -->
-    <div class="modal fade" id="topicsModal" tabindex="-1">
+    <d<div class="modal fade" id="topicsModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
@@ -1731,6 +1731,17 @@ if (isset($_GET['delete']) && $lessonId) {
                         </div>
                     </div>
 
+                    <!-- Индикатор количества выбранных тем -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="selected-topics-indicator">
+                            <i class="bi bi-check2-square"></i>
+                            Выбрано: <span id="selectedTopicsCount">0</span> тем
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearAllTopicSelections()">
+                            <i class="bi bi-x-circle"></i> Снять все
+                        </button>
+                    </div>
+
                     <div class="topic-selector" id="topicsList">
                         <?php foreach ($allTopics as $topic): ?>
                             <div class="form-check topic-item" data-category="<?php echo $topic['category_id']; ?>"
@@ -1754,288 +1765,290 @@ if (isset($_GET['delete']) && $lessonId) {
                 </div>
             </div>
         </div>
-    </div>
+        </div>
 
-    <!-- Модальное окно выбора ресурсов -->
-    <!-- Модальное окно выбора ресурсов -->
-    <div class="modal fade" id="resourcesModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Выбор ресурсов</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <!-- Фильтры -->
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <label class="form-label">Категория</label>
-                            <select class="form-select" id="resourceCategoryFilter">
-                                <option value="">Все категории</option>
-                                <?php foreach ($resourceCategories as $category): ?>
-                                    <option value="<?php echo $category['id']; ?>">
-                                        <?php echo htmlspecialchars($category['name']); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Метка</label>
-                            <select class="form-select" id="resourceLabelFilter">
-                                <option value="">Все метки</option>
-                                <?php foreach ($resourceLabels as $label): ?>
-                                    <option value="<?php echo $label['id']; ?>"
-                                        data-category="<?php echo $label['category_id']; ?>">
-                                        <?php echo htmlspecialchars($label['name']); ?>
-                                        <?php if ($label['category_name']): ?>
-                                            (<?php echo htmlspecialchars($label['category_name']); ?>)
-                                        <?php endif; ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Тип ресурса</label>
-                            <select class="form-select" id="resourceTypeFilter">
-                                <option value="">Все типы</option>
-                                <option value="page">Страница</option>
-                                <option value="document">Документ</option>
-                                <option value="video">Видео</option>
-                                <option value="audio">Аудио</option>
-                                <option value="other">Другое</option>
-                            </select>
-                        </div>
+
+        <!-- Модальное окно выбора ресурсов -->
+        <div class="modal fade" id="resourcesModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Выбор ресурсов</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
-
-                    <div class="row mb-3">
-                        <div class="col-md-8">
-                            <label class="form-label">Поиск по названию</label>
-                            <input type="text" class="form-control" id="resourceSearch"
-                                placeholder="Введите текст для поиска...">
+                    <div class="modal-body">
+                        <!-- Фильтры -->
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Категория</label>
+                                <select class="form-select" id="resourceCategoryFilter">
+                                    <option value="">Все категории</option>
+                                    <?php foreach ($resourceCategories as $category): ?>
+                                        <option value="<?php echo $category['id']; ?>">
+                                            <?php echo htmlspecialchars($category['name']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Метка</label>
+                                <select class="form-select" id="resourceLabelFilter">
+                                    <option value="">Все метки</option>
+                                    <?php foreach ($resourceLabels as $label): ?>
+                                        <option value="<?php echo $label['id']; ?>"
+                                            data-category="<?php echo $label['category_id']; ?>">
+                                            <?php echo htmlspecialchars($label['name']); ?>
+                                            <?php if ($label['category_name']): ?>
+                                                (<?php echo htmlspecialchars($label['category_name']); ?>)
+                                            <?php endif; ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Тип ресурса</label>
+                                <select class="form-select" id="resourceTypeFilter">
+                                    <option value="">Все типы</option>
+                                    <option value="page">Страница</option>
+                                    <option value="document">Документ</option>
+                                    <option value="video">Видео</option>
+                                    <option value="audio">Аудио</option>
+                                    <option value="other">Другое</option>
+                                </select>
+                            </div>
                         </div>
-                        <div class="col-md-4 d-flex align-items-end">
-                            <button type="button" class="btn btn-outline-secondary w-100"
-                                onclick="clearResourceFilters()">
-                                <i class="bi bi-eraser"></i> Сбросить фильтры
-                            </button>
+
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <label class="form-label">Поиск по названию</label>
+                                <input type="text" class="form-control" id="resourceSearch"
+                                    placeholder="Введите текст для поиска...">
+                            </div>
+                            <div class="col-md-4 d-flex align-items-end">
+                                <button type="button" class="btn btn-outline-secondary w-100"
+                                    onclick="clearResourceFilters()">
+                                    <i class="bi bi-eraser"></i> Сбросить фильтры
+                                </button>
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- Информация о количестве и выбранных фильтрах -->
-                    <div class="mb-2 small">
-                        <span id="resourceCount" class="badge bg-primary">0</span> ресурсов найдено
-                        <span id="activeFilters" class="ms-2"></span>
-                    </div>
+                        <!-- Информация о количестве и выбранных фильтрах -->
+                        <div class="mb-2 small">
+                            <span id="resourceCount" class="badge bg-primary">0</span> ресурсов найдено
+                            <span id="activeFilters" class="ms-2"></span>
+                        </div>
 
-                    <!-- Список ресурсов -->
-                    <div class="topic-selector" id="resourcesList">
-                        <?php foreach ($allResourcesWithLabels as $resource):
-                            // Определяем иконку для типа ресурса
-                            $typeIcon = 'bi-file-earmark';
-                            if ($resource['type'] === 'page')
-                                $typeIcon = 'bi-file-earmark-text';
-                            else if ($resource['type'] === 'document')
-                                $typeIcon = 'bi-file-earmark-pdf';
-                            else if ($resource['type'] === 'video')
-                                $typeIcon = 'bi-camera-reels';
-                            else if ($resource['type'] === 'audio')
-                                $typeIcon = 'bi-mic';
+                        <!-- Список ресурсов -->
+                        <div class="topic-selector" id="resourcesList">
+                            <?php foreach ($allResourcesWithLabels as $resource):
+                                // Определяем иконку для типа ресурса
+                                $typeIcon = 'bi-file-earmark';
+                                if ($resource['type'] === 'page')
+                                    $typeIcon = 'bi-file-earmark-text';
+                                else if ($resource['type'] === 'document')
+                                    $typeIcon = 'bi-file-earmark-pdf';
+                                else if ($resource['type'] === 'video')
+                                    $typeIcon = 'bi-camera-reels';
+                                else if ($resource['type'] === 'audio')
+                                    $typeIcon = 'bi-mic';
 
-                            // Получаем ID меток для фильтрации
-                            $labelIds = $resource['label_ids'] ? explode(',', $resource['label_ids']) : [];
-                            $labelNames = $resource['label_names'] ? explode(',', $resource['label_names']) : [];
-                            ?>
-                            <div class="form-check resource-item-check mb-2" data-id="<?php echo $resource['id']; ?>"
-                                data-description="<?php echo htmlspecialchars($resource['description'] ?: 'Ресурс'); ?>"
-                                data-url="<?php echo htmlspecialchars($resource['url']); ?>"
-                                data-type="<?php echo $resource['type']; ?>"
-                                data-category="<?php echo $resource['category_id']; ?>"
-                                data-labels="<?php echo implode(',', $labelIds); ?>"
-                                data-search="<?php echo strtolower(htmlspecialchars($resource['description'] ?: $resource['url'])); ?>">
-                                <div class="d-flex align-items-start">
-                                    <input type="checkbox" class="form-check-input resource-checkbox me-2"
-                                        value="<?php echo $resource['id']; ?>" id="resource_<?php echo $resource['id']; ?>">
-                                    <label class="form-check-label flex-grow-1"
-                                        for="resource_<?php echo $resource['id']; ?>">
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <div class="flex-grow-1">
-                                                <div class="d-flex align-items-center">
-                                                    <i class="bi <?php echo $typeIcon; ?> me-2 text-primary"></i>
-                                                    <strong><?php echo htmlspecialchars($resource['description'] ?: substr($resource['url'], 0, 50) . '...'); ?></strong>
-                                                </div>
-
-                                                <!-- Метки ресурса -->
-                                                <?php if (!empty($labelNames)): ?>
-                                                    <div class="mt-1">
-                                                        <?php foreach ($labelNames as $labelName): ?>
-                                                            <?php if (trim($labelName)): ?>
-                                                                <span
-                                                                    class="badge bg-light text-dark me-1"><?php echo htmlspecialchars(trim($labelName)); ?></span>
-                                                            <?php endif; ?>
-                                                        <?php endforeach; ?>
+                                // Получаем ID меток для фильтрации
+                                $labelIds = $resource['label_ids'] ? explode(',', $resource['label_ids']) : [];
+                                $labelNames = $resource['label_names'] ? explode(',', $resource['label_names']) : [];
+                                ?>
+                                <div class="form-check resource-item-check mb-2" data-id="<?php echo $resource['id']; ?>"
+                                    data-description="<?php echo htmlspecialchars($resource['description'] ?: 'Ресурс'); ?>"
+                                    data-url="<?php echo htmlspecialchars($resource['url']); ?>"
+                                    data-type="<?php echo $resource['type']; ?>"
+                                    data-category="<?php echo $resource['category_id']; ?>"
+                                    data-labels="<?php echo implode(',', $labelIds); ?>"
+                                    data-search="<?php echo strtolower(htmlspecialchars($resource['description'] ?: $resource['url'])); ?>">
+                                    <div class="d-flex align-items-start">
+                                        <input type="checkbox" class="form-check-input resource-checkbox me-2"
+                                            value="<?php echo $resource['id']; ?>"
+                                            id="resource_<?php echo $resource['id']; ?>">
+                                        <label class="form-check-label flex-grow-1"
+                                            for="resource_<?php echo $resource['id']; ?>">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div class="flex-grow-1">
+                                                    <div class="d-flex align-items-center">
+                                                        <i class="bi <?php echo $typeIcon; ?> me-2 text-primary"></i>
+                                                        <strong><?php echo htmlspecialchars($resource['description'] ?: substr($resource['url'], 0, 50) . '...'); ?></strong>
                                                     </div>
-                                                <?php endif; ?>
 
-                                                <!-- Категория и тип -->
-                                                <div class="mt-1">
-                                                    <?php
-                                                    // Находим категорию
-                                                    $catName = '';
-                                                    foreach ($resourceCategories as $cat) {
-                                                        if ($cat['id'] == $resource['category_id']) {
-                                                            $catName = $cat['name'];
-                                                            break;
-                                                        }
-                                                    }
-                                                    ?>
-                                                    <?php if ($catName): ?>
-                                                        <span class="badge" style="background: #e9ecef; color: #333;">
-                                                            <i class="bi bi-folder"></i>
-                                                            <?php echo htmlspecialchars($catName); ?>
-                                                        </span>
+                                                    <!-- Метки ресурса -->
+                                                    <?php if (!empty($labelNames)): ?>
+                                                        <div class="mt-1">
+                                                            <?php foreach ($labelNames as $labelName): ?>
+                                                                <?php if (trim($labelName)): ?>
+                                                                    <span
+                                                                        class="badge bg-light text-dark me-1"><?php echo htmlspecialchars(trim($labelName)); ?></span>
+                                                                <?php endif; ?>
+                                                            <?php endforeach; ?>
+                                                        </div>
                                                     <?php endif; ?>
 
-                                                    <span class="badge bg-secondary ms-1">
+                                                    <!-- Категория и тип -->
+                                                    <div class="mt-1">
                                                         <?php
-                                                        $typeNames = ['page' => 'Страница', 'document' => 'Документ', 'video' => 'Видео', 'audio' => 'Аудио', 'other' => 'Другое'];
-                                                        echo $typeNames[$resource['type']] ?? 'Другое';
+                                                        // Находим категорию
+                                                        $catName = '';
+                                                        foreach ($resourceCategories as $cat) {
+                                                            if ($cat['id'] == $resource['category_id']) {
+                                                                $catName = $cat['name'];
+                                                                break;
+                                                            }
+                                                        }
                                                         ?>
-                                                    </span>
+                                                        <?php if ($catName): ?>
+                                                            <span class="badge" style="background: #e9ecef; color: #333;">
+                                                                <i class="bi bi-folder"></i>
+                                                                <?php echo htmlspecialchars($catName); ?>
+                                                            </span>
+                                                        <?php endif; ?>
+
+                                                        <span class="badge bg-secondary ms-1">
+                                                            <?php
+                                                            $typeNames = ['page' => 'Страница', 'document' => 'Документ', 'video' => 'Видео', 'audio' => 'Аудио', 'other' => 'Другое'];
+                                                            echo $typeNames[$resource['type']] ?? 'Другое';
+                                                            ?>
+                                                        </span>
+                                                    </div>
                                                 </div>
+
+                                                <a href="<?php echo htmlspecialchars($resource['url']); ?>" target="_blank"
+                                                    class="btn btn-sm btn-outline-primary ms-2" title="Перейти по ссылке"
+                                                    onclick="event.stopPropagation()">
+                                                    <i class="bi bi-box-arrow-up-right"></i>
+                                                </a>
                                             </div>
-
-                                            <a href="<?php echo htmlspecialchars($resource['url']); ?>" target="_blank"
-                                                class="btn btn-sm btn-outline-primary ms-2" title="Перейти по ссылке"
-                                                onclick="event.stopPropagation()">
-                                                <i class="bi bi-box-arrow-up-right"></i>
-                                            </a>
-                                        </div>
-                                    </label>
+                                        </label>
+                                    </div>
                                 </div>
-                            </div>
-                        <?php endforeach; ?>
+                            <?php endforeach; ?>
+                        </div>
+
+                        <!-- Сообщение, если ничего не найдено -->
+                        <div id="noResourcesMessage" class="text-center py-4 text-muted" style="display: none;">
+                            <i class="bi bi-search" style="font-size: 2rem;"></i>
+                            <p class="mt-2">Ресурсы не найдены</p>
+                        </div>
                     </div>
-
-                    <!-- Сообщение, если ничего не найдено -->
-                    <div id="noResourcesMessage" class="text-center py-4 text-muted" style="display: none;">
-                        <i class="bi bi-search" style="font-size: 2rem;"></i>
-                        <p class="mt-2">Ресурсы не найдены</p>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                    <button type="button" class="btn btn-primary" onclick="applyResources()">Применить</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Модальное окно поиска домашних заданий -->
-    <div class="modal fade" id="homeworkModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Поиск домашних заданий</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <input type="text" class="form-control mb-3" id="homeworkSearch" placeholder="Поиск по тексту...">
-
-                    <div class="homework-search" id="homeworkList">
-                        <?php foreach ($allHomework as $homework): ?>
-                            <?php if (!empty($homework)): ?>
-                                <div class="homework-item"
-                                    onclick="selectHomework('<?php echo htmlspecialchars(addslashes($homework)); ?>')">
-                                    <?php echo htmlspecialchars(substr($homework, 0, 100)) . (strlen($homework) > 100 ? '...' : ''); ?>
-                                </div>
-                            <?php endif; ?>
-                        <?php endforeach; ?>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button type="button" class="btn btn-primary" onclick="applyResources()">Применить</button>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+
+        <!-- Модальное окно поиска домашних заданий -->
+        <div class="modal fade" id="homeworkModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Поиск домашних заданий</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="text" class="form-control mb-3" id="homeworkSearch"
+                            placeholder="Поиск по тексту...">
+
+                        <div class="homework-search" id="homeworkList">
+                            <?php foreach ($allHomework as $homework): ?>
+                                <?php if (!empty($homework)): ?>
+                                    <div class="homework-item"
+                                        onclick="selectHomework('<?php echo htmlspecialchars(addslashes($homework)); ?>')">
+                                        <?php echo htmlspecialchars(substr($homework, 0, 100)) . (strlen($homework) > 100 ? '...' : ''); ?>
+                                    </div>
+                                <?php endif; ?>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
 
-    <script>
-        // Глобальные переменные для хранения выбранных элементов
-        let selectedTopics = <?php echo json_encode($selectedTopicIds); ?>;
-        let selectedResourcesData = <?php echo json_encode($selectedResources); ?>;
+        <script>
+            // Глобальные переменные для хранения выбранных элементов
+            let selectedTopics = <?php echo json_encode($selectedTopicIds); ?>;
+            let selectedResourcesData = <?php echo json_encode($selectedResources); ?>;
 
-        // Функции для работы с темами
-        function openTopicsModal() {
-            const modal = new bootstrap.Modal(document.getElementById('topicsModal'));
+            // Функции для работы с темами
+            function openTopicsModal() {
+                const modal = new bootstrap.Modal(document.getElementById('topicsModal'));
 
-            // Обновляем чекбоксы в соответствии с выбранными темами
-            document.querySelectorAll('#topicsList .topic-checkbox').forEach(cb => {
-                cb.checked = selectedTopics.includes(parseInt(cb.value));
-            });
+                // Обновляем чекбоксы в соответствии с выбранными темами
+                document.querySelectorAll('#topicsList .topic-checkbox').forEach(cb => {
+                    cb.checked = selectedTopics.includes(parseInt(cb.value));
+                });
 
-            modal.show();
-        }
+                modal.show();
+            }
 
-        function applyTopics() {
-            selectedTopics = [];
-            document.querySelectorAll('#topicsList .topic-checkbox:checked').forEach(cb => {
-                selectedTopics.push(parseInt(cb.value));
-            });
+            function applyTopics() {
+                selectedTopics = [];
+                document.querySelectorAll('#topicsList .topic-checkbox:checked').forEach(cb => {
+                    selectedTopics.push(parseInt(cb.value));
+                });
 
-            // Обновляем отображение выбранных тем
-            const container = document.getElementById('selected-topics');
-            container.innerHTML = '';
+                // Обновляем отображение выбранных тем
+                const container = document.getElementById('selected-topics');
+                container.innerHTML = '';
 
-            selectedTopics.forEach(topicId => {
-                const label = document.querySelector(`label[for="topic_${topicId}"]`).innerText;
-                const span = document.createElement('span');
-                span.className = 'topic-badge';
-                span.innerHTML = `${label} <input type="hidden" name="topics[]" value="${topicId}">`;
-                container.appendChild(span);
-            });
+                selectedTopics.forEach(topicId => {
+                    const label = document.querySelector(`label[for="topic_${topicId}"]`).innerText;
+                    const span = document.createElement('span');
+                    span.className = 'topic-badge';
+                    span.innerHTML = `${label} <input type="hidden" name="topics[]" value="${topicId}">`;
+                    container.appendChild(span);
+                });
 
-            bootstrap.Modal.getInstance(document.getElementById('topicsModal')).hide();
-        }
+                bootstrap.Modal.getInstance(document.getElementById('topicsModal')).hide();
+            }
 
-        // Функции для работы с ресурсами
-        function openResourcesModal() {
-            const modal = new bootstrap.Modal(document.getElementById('resourcesModal'));
+            // Функции для работы с ресурсами
+            function openResourcesModal() {
+                const modal = new bootstrap.Modal(document.getElementById('resourcesModal'));
 
-            // Обновляем чекбоксы в соответствии с выбранными ресурсами
-            document.querySelectorAll('#resourcesList .resource-checkbox').forEach(cb => {
-                cb.checked = selectedResourcesData.hasOwnProperty(cb.value);
-            });
+                // Обновляем чекбоксы в соответствии с выбранными ресурсами
+                document.querySelectorAll('#resourcesList .resource-checkbox').forEach(cb => {
+                    cb.checked = selectedResourcesData.hasOwnProperty(cb.value);
+                });
 
-            modal.show();
-        }
+                modal.show();
+            }
 
-        function applyResources() {
-            const selected = [];
-            document.querySelectorAll('#resourcesList .resource-checkbox:checked').forEach(cb => {
-                selected.push(parseInt(cb.value));
-            });
+            function applyResources() {
+                const selected = [];
+                document.querySelectorAll('#resourcesList .resource-checkbox:checked').forEach(cb => {
+                    selected.push(parseInt(cb.value));
+                });
 
-            // Обновляем контейнер с выбранными ресурсами
-            const container = document.getElementById('selected-resources');
-            container.innerHTML = '';
+                // Обновляем контейнер с выбранными ресурсами
+                const container = document.getElementById('selected-resources');
+                container.innerHTML = '';
 
-            selected.forEach(resourceId => {
-                const resourceDiv = document.querySelector(`#resourcesList .resource-checkbox[value="${resourceId}"]`).closest('.resource-item-check');
+                selected.forEach(resourceId => {
+                    const resourceDiv = document.querySelector(`#resourcesList .resource-checkbox[value="${resourceId}"]`).closest('.resource-item-check');
 
-                // Получаем данные из data-атрибутов
-                const description = resourceDiv.dataset.description || 'Ресурс';
-                const url = resourceDiv.dataset.url || '';
-                const type = resourceDiv.dataset.type || 'other';
+                    // Получаем данные из data-атрибутов
+                    const description = resourceDiv.dataset.description || 'Ресурс';
+                    const url = resourceDiv.dataset.url || '';
+                    const type = resourceDiv.dataset.type || 'other';
 
-                // Иконка в зависимости от типа
-                let icon = 'bi-file-earmark';
-                if (type === 'page') icon = 'bi-file-earmark-text';
-                else if (type === 'document') icon = 'bi-file-earmark-pdf';
-                else if (type === 'video') icon = 'bi-camera-reels';
-                else if (type === 'audio') icon = 'bi-mic';
+                    // Иконка в зависимости от типа
+                    let icon = 'bi-file-earmark';
+                    if (type === 'page') icon = 'bi-file-earmark-text';
+                    else if (type === 'document') icon = 'bi-file-earmark-pdf';
+                    else if (type === 'video') icon = 'bi-camera-reels';
+                    else if (type === 'audio') icon = 'bi-mic';
 
-                const div = document.createElement('div');
-                div.className = 'resource-item';
-                div.id = `resource-${resourceId}`;
-                div.innerHTML = `
+                    const div = document.createElement('div');
+                    div.className = 'resource-item';
+                    div.id = `resource-${resourceId}`;
+                    div.innerHTML = `
             <div class="d-flex justify-content-between align-items-start">
                 <div class="flex-grow-1">
                     <div class="d-flex align-items-center">
@@ -2058,310 +2071,355 @@ if (isset($_GET['delete']) && $lessonId) {
                 <input type="hidden" name="resources[]" value="${resourceId}">
             </div>
         `;
-                container.appendChild(div);
+                    container.appendChild(div);
 
-                // Обновляем selectedResourcesData
-                if (!selectedResourcesData[resourceId]) {
-                    selectedResourcesData[resourceId] = '';
+                    // Обновляем selectedResourcesData
+                    if (!selectedResourcesData[resourceId]) {
+                        selectedResourcesData[resourceId] = '';
+                    }
+                });
+
+                // Удаляем ресурсы, которые были сняты
+                Object.keys(selectedResourcesData).forEach(resourceId => {
+                    if (!selected.includes(parseInt(resourceId))) {
+                        delete selectedResourcesData[resourceId];
+                    }
+                });
+
+                bootstrap.Modal.getInstance(document.getElementById('resourcesModal')).hide();
+            }
+
+
+            function removeResource(resourceId) {
+                document.getElementById(`resource-${resourceId}`).remove();
+                delete selectedResourcesData[resourceId];
+
+                // Снимаем чекбокс в модальном окне
+                const checkbox = document.querySelector(`#resourcesList .resource-checkbox[value="${resourceId}"]`);
+                if (checkbox) {
+                    checkbox.checked = false;
                 }
-            });
+            }
 
-            // Удаляем ресурсы, которые были сняты
-            Object.keys(selectedResourcesData).forEach(resourceId => {
-                if (!selected.includes(parseInt(resourceId))) {
-                    delete selectedResourcesData[resourceId];
+            // Функции для работы с ДЗ
+            function selectHomework(text) {
+                document.querySelector('textarea[name="homework_manual"]').value = text;
+                bootstrap.Modal.getInstance(document.getElementById('homeworkModal')).hide();
+            }
+
+            // Фильтрация тем
+            document.addEventListener('DOMContentLoaded', function () {
+                const categoryFilter = document.getElementById('topicCategoryFilter');
+                const searchInput = document.getElementById('topicSearch');
+
+                if (categoryFilter) {
+                    categoryFilter.addEventListener('change', filterTopics);
                 }
-            });
 
-            bootstrap.Modal.getInstance(document.getElementById('resourcesModal')).hide();
-        }
+                if (searchInput) {
+                    searchInput.addEventListener('input', filterTopics);
+                }
 
+                // Фильтрация ресурсов
+                const resourceSearch = document.getElementById('resourceSearch');
+                if (resourceSearch) {
+                    resourceSearch.addEventListener('input', function (e) {
+                        const search = e.target.value.toLowerCase();
 
-        function removeResource(resourceId) {
-            document.getElementById(`resource-${resourceId}`).remove();
-            delete selectedResourcesData[resourceId];
-
-            // Снимаем чекбокс в модальном окне
-            const checkbox = document.querySelector(`#resourcesList .resource-checkbox[value="${resourceId}"]`);
-            if (checkbox) {
-                checkbox.checked = false;
-            }
-        }
-
-        // Функции для работы с ДЗ
-        function selectHomework(text) {
-            document.querySelector('textarea[name="homework_manual"]').value = text;
-            bootstrap.Modal.getInstance(document.getElementById('homeworkModal')).hide();
-        }
-
-        // Фильтрация тем
-        document.addEventListener('DOMContentLoaded', function () {
-            const categoryFilter = document.getElementById('topicCategoryFilter');
-            const searchInput = document.getElementById('topicSearch');
-
-            if (categoryFilter) {
-                categoryFilter.addEventListener('change', filterTopics);
-            }
-
-            if (searchInput) {
-                searchInput.addEventListener('input', filterTopics);
-            }
-
-            // Фильтрация ресурсов
-            const resourceSearch = document.getElementById('resourceSearch');
-            if (resourceSearch) {
-                resourceSearch.addEventListener('input', function (e) {
-                    const search = e.target.value.toLowerCase();
-
-                    document.querySelectorAll('#resourcesList .resource-item-check').forEach(item => {
-                        const text = item.innerText.toLowerCase();
-                        item.style.display = text.includes(search) ? 'block' : 'none';
+                        document.querySelectorAll('#resourcesList .resource-item-check').forEach(item => {
+                            const text = item.innerText.toLowerCase();
+                            item.style.display = text.includes(search) ? 'block' : 'none';
+                        });
                     });
-                });
-            }
+                }
 
-            // Фильтрация ДЗ
-            const homeworkSearch = document.getElementById('homeworkSearch');
-            if (homeworkSearch) {
-                homeworkSearch.addEventListener('input', function (e) {
-                    const search = e.target.value.toLowerCase();
+                // Фильтрация ДЗ
+                const homeworkSearch = document.getElementById('homeworkSearch');
+                if (homeworkSearch) {
+                    homeworkSearch.addEventListener('input', function (e) {
+                        const search = e.target.value.toLowerCase();
 
-                    document.querySelectorAll('#homeworkList .homework-item').forEach(item => {
-                        const text = item.innerText.toLowerCase();
-                        item.style.display = text.includes(search) ? 'block' : 'none';
+                        document.querySelectorAll('#homeworkList .homework-item').forEach(item => {
+                            const text = item.innerText.toLowerCase();
+                            item.style.display = text.includes(search) ? 'block' : 'none';
+                        });
                     });
-                });
-            }
-        });
-
-        function filterTopics() {
-            const category = document.getElementById('topicCategoryFilter').value;
-            const search = document.getElementById('topicSearch').value.toLowerCase();
-
-            document.querySelectorAll('#topicsList .topic-item').forEach(item => {
-                let show = true;
-                const itemCategory = item.dataset.category;
-                const itemName = item.dataset.name || '';
-
-                if (category && itemCategory != category && !(category === 'null' && !itemCategory)) {
-                    show = false;
                 }
-
-                if (search && !itemName.includes(search)) {
-                    show = false;
-                }
-
-                item.style.display = show ? 'block' : 'none';
             });
-        }
 
-        // Очистка всех полей
-        function clearAllFields() {
-            if (confirm('Очистить все поля формы?')) {
-                document.getElementById('lessonForm').reset();
-                document.getElementById('selected-topics').innerHTML = '';
-                document.getElementById('selected-resources').innerHTML = '';
-                selectedTopics = [];
-                selectedResourcesData = {};
-            }
-        }
+            function filterTopics() {
+                const category = document.getElementById('topicCategoryFilter').value;
+                const search = document.getElementById('topicSearch').value.toLowerCase();
 
-        // Копирование публичной ссылки
-        function copyLessonLink() {
-            const link = "<?php echo $_SERVER['REQUEST_SCHEME'] . '://' . $_SERVER['HTTP_HOST'] . '/lessons.php?public=1&token=' . ($editLesson['public_link'] ?? ''); ?>";
-            navigator.clipboard.writeText(link).then(() => {
-                alert('Ссылка скопирована в буфер обмена');
-            });
-        }
-
-        // Инициализация при загрузке страницы
-        document.addEventListener('DOMContentLoaded', function () {
-            // Исправляем проблему с модальными окнами Bootstrap
-            var modalElements = document.querySelectorAll('.modal');
-            modalElements.forEach(function (modalEl) {
-                new bootstrap.Modal(modalEl);
-            });
-        });
-
-
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') {
-                const openModals = document.querySelectorAll('.modal.show');
-                openModals.forEach(modal => {
-                    bootstrap.Modal.getInstance(modal).hide();
-                });
-            }
-        });
-
-        // Функции для фильтрации ресурсов
-        function filterResources() {
-            const category = document.getElementById('resourceCategoryFilter').value;
-            const label = document.getElementById('resourceLabelFilter').value;
-            const type = document.getElementById('resourceTypeFilter').value;
-            const search = document.getElementById('resourceSearch').value.toLowerCase();
-
-            let visibleCount = 0;
-
-            document.querySelectorAll('#resourcesList .resource-item-check').forEach(item => {
-                let show = true;
-
-                // Фильтр по категории
-                if (category) {
+                document.querySelectorAll('#topicsList .topic-item').forEach(item => {
+                    let show = true;
                     const itemCategory = item.dataset.category;
-                    if (itemCategory != category && !(category === 'null' && !itemCategory)) {
+                    const itemName = item.dataset.name || '';
+
+                    if (category && itemCategory != category && !(category === 'null' && !itemCategory)) {
                         show = false;
                     }
-                }
 
-                // Фильтр по метке
-                if (show && label) {
-                    const itemLabels = item.dataset.labels ? item.dataset.labels.split(',') : [];
-                    if (!itemLabels.includes(label)) {
+                    if (search && !itemName.includes(search)) {
                         show = false;
                     }
-                }
 
-                // Фильтр по типу
-                if (show && type) {
-                    if (item.dataset.type !== type) {
-                        show = false;
-                    }
-                }
-
-                // Поиск по тексту
-                if (show && search) {
-                    const searchText = item.dataset.search || '';
-                    if (!searchText.includes(search)) {
-                        show = false;
-                    }
-                }
-
-                item.style.display = show ? 'block' : 'none';
-                if (show) visibleCount++;
-            });
-
-            // Обновляем счетчик
-            document.getElementById('resourceCount').textContent = visibleCount;
-
-            // Показываем/скрываем сообщение о пустом результате
-            const noResourcesMsg = document.getElementById('noResourcesMessage');
-            if (visibleCount === 0) {
-                noResourcesMsg.style.display = 'block';
-            } else {
-                noResourcesMsg.style.display = 'none';
-            }
-
-            // Обновляем отображение активных фильтров
-            updateActiveFilters();
-        }
-
-        function updateActiveFilters() {
-            const category = document.getElementById('resourceCategoryFilter');
-            const label = document.getElementById('resourceLabelFilter');
-            const type = document.getElementById('resourceTypeFilter');
-            const search = document.getElementById('resourceSearch');
-
-            const filters = [];
-
-            if (category.value) {
-                const catText = category.options[category.selectedIndex].text;
-                filters.push(`<span class="badge bg-info me-1">Категория: ${catText}</span>`);
-            }
-
-            if (label.value) {
-                const labelText = label.options[label.selectedIndex].text.split('(')[0].trim();
-                filters.push(`<span class="badge bg-success me-1">Метка: ${labelText}</span>`);
-            }
-
-            if (type.value) {
-                const typeText = type.options[type.selectedIndex].text;
-                filters.push(`<span class="badge bg-warning me-1">Тип: ${typeText}</span>`);
-            }
-
-            if (search.value) {
-                filters.push(`<span class="badge bg-secondary me-1">Поиск: ${search.value}</span>`);
-            }
-
-            document.getElementById('activeFilters').innerHTML = filters.join('');
-        }
-
-        function clearResourceFilters() {
-            document.getElementById('resourceCategoryFilter').value = '';
-            document.getElementById('resourceLabelFilter').value = '';
-            document.getElementById('resourceTypeFilter').value = '';
-            document.getElementById('resourceSearch').value = '';
-            filterResources();
-        }
-
-        // Обновляем фильтр меток при изменении категории
-        document.getElementById('resourceCategoryFilter')?.addEventListener('change', function () {
-            const categoryId = this.value;
-            const labelFilter = document.getElementById('resourceLabelFilter');
-
-            // Показываем только метки, принадлежащие выбранной категории
-            Array.from(labelFilter.options).forEach(option => {
-                if (option.value === '') return;
-
-                const optionCategory = option.dataset.category;
-                if (categoryId && optionCategory != categoryId) {
-                    option.style.display = 'none';
-                } else {
-                    option.style.display = 'block';
-                }
-            });
-
-            filterResources();
-        });
-
-        // Добавляем обработчики событий
-        document.addEventListener('DOMContentLoaded', function () {
-            // Фильтры для ресурсов
-            const resourceCategoryFilter = document.getElementById('resourceCategoryFilter');
-            const resourceLabelFilter = document.getElementById('resourceLabelFilter');
-            const resourceTypeFilter = document.getElementById('resourceTypeFilter');
-            const resourceSearch = document.getElementById('resourceSearch');
-
-            if (resourceCategoryFilter) {
-                resourceCategoryFilter.addEventListener('change', filterResources);
-            }
-
-            if (resourceLabelFilter) {
-                resourceLabelFilter.addEventListener('change', filterResources);
-            }
-
-            if (resourceTypeFilter) {
-                resourceTypeFilter.addEventListener('change', filterResources);
-            }
-
-            if (resourceSearch) {
-                resourceSearch.addEventListener('input', filterResources);
-            }
-
-            // Обновляем счетчик при открытии модального окна
-            const resourcesModal = document.getElementById('resourcesModal');
-            if (resourcesModal) {
-                resourcesModal.addEventListener('shown.bs.modal', function () {
-                    filterResources();
+                    item.style.display = show ? 'block' : 'none';
                 });
             }
-        });
 
-        // Обновляем функцию openResourcesModal
-        function openResourcesModal() {
-            const modal = new bootstrap.Modal(document.getElementById('resourcesModal'));
+            // Очистка всех полей
+            function clearAllFields() {
+                if (confirm('Очистить все поля формы?')) {
+                    document.getElementById('lessonForm').reset();
+                    document.getElementById('selected-topics').innerHTML = '';
+                    document.getElementById('selected-resources').innerHTML = '';
+                    selectedTopics = [];
+                    selectedResourcesData = {};
+                }
+            }
 
-            // Обновляем чекбоксы в соответствии с выбранными ресурсами
-            document.querySelectorAll('#resourcesList .resource-checkbox').forEach(cb => {
-                cb.checked = selectedResourcesData.hasOwnProperty(cb.value);
+            // Копирование публичной ссылки
+            function copyLessonLink() {
+                const link = "<?php echo $_SERVER['REQUEST_SCHEME'] . '://' . $_SERVER['HTTP_HOST'] . '/lessons.php?public=1&token=' . ($editLesson['public_link'] ?? ''); ?>";
+                navigator.clipboard.writeText(link).then(() => {
+                    alert('Ссылка скопирована в буфер обмена');
+                });
+            }
+
+            // Инициализация при загрузке страницы
+            document.addEventListener('DOMContentLoaded', function () {
+                // Исправляем проблему с модальными окнами Bootstrap
+                var modalElements = document.querySelectorAll('.modal');
+                modalElements.forEach(function (modalEl) {
+                    new bootstrap.Modal(modalEl);
+                });
             });
 
-            // Сбрасываем фильтры
-            clearResourceFilters();
 
-            modal.show();
-        }
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') {
+                    const openModals = document.querySelectorAll('.modal.show');
+                    openModals.forEach(modal => {
+                        bootstrap.Modal.getInstance(modal).hide();
+                    });
+                }
+            });
+
+            // Функции для фильтрации ресурсов
+            function filterResources() {
+                const category = document.getElementById('resourceCategoryFilter').value;
+                const label = document.getElementById('resourceLabelFilter').value;
+                const type = document.getElementById('resourceTypeFilter').value;
+                const search = document.getElementById('resourceSearch').value.toLowerCase();
+
+                let visibleCount = 0;
+
+                document.querySelectorAll('#resourcesList .resource-item-check').forEach(item => {
+                    let show = true;
+
+                    // Фильтр по категории
+                    if (category) {
+                        const itemCategory = item.dataset.category;
+                        if (itemCategory != category && !(category === 'null' && !itemCategory)) {
+                            show = false;
+                        }
+                    }
+
+                    // Фильтр по метке
+                    if (show && label) {
+                        const itemLabels = item.dataset.labels ? item.dataset.labels.split(',') : [];
+                        if (!itemLabels.includes(label)) {
+                            show = false;
+                        }
+                    }
+
+                    // Фильтр по типу
+                    if (show && type) {
+                        if (item.dataset.type !== type) {
+                            show = false;
+                        }
+                    }
+
+                    // Поиск по тексту
+                    if (show && search) {
+                        const searchText = item.dataset.search || '';
+                        if (!searchText.includes(search)) {
+                            show = false;
+                        }
+                    }
+
+                    item.style.display = show ? 'block' : 'none';
+                    if (show) visibleCount++;
+                });
+
+                // Обновляем счетчик
+                document.getElementById('resourceCount').textContent = visibleCount;
+
+                // Показываем/скрываем сообщение о пустом результате
+                const noResourcesMsg = document.getElementById('noResourcesMessage');
+                if (visibleCount === 0) {
+                    noResourcesMsg.style.display = 'block';
+                } else {
+                    noResourcesMsg.style.display = 'none';
+                }
+
+                // Обновляем отображение активных фильтров
+                updateActiveFilters();
+            }
+
+            function updateActiveFilters() {
+                const category = document.getElementById('resourceCategoryFilter');
+                const label = document.getElementById('resourceLabelFilter');
+                const type = document.getElementById('resourceTypeFilter');
+                const search = document.getElementById('resourceSearch');
+
+                const filters = [];
+
+                if (category.value) {
+                    const catText = category.options[category.selectedIndex].text;
+                    filters.push(`<span class="badge bg-info me-1">Категория: ${catText}</span>`);
+                }
+
+                if (label.value) {
+                    const labelText = label.options[label.selectedIndex].text.split('(')[0].trim();
+                    filters.push(`<span class="badge bg-success me-1">Метка: ${labelText}</span>`);
+                }
+
+                if (type.value) {
+                    const typeText = type.options[type.selectedIndex].text;
+                    filters.push(`<span class="badge bg-warning me-1">Тип: ${typeText}</span>`);
+                }
+
+                if (search.value) {
+                    filters.push(`<span class="badge bg-secondary me-1">Поиск: ${search.value}</span>`);
+                }
+
+                document.getElementById('activeFilters').innerHTML = filters.join('');
+            }
+
+            function clearResourceFilters() {
+                document.getElementById('resourceCategoryFilter').value = '';
+                document.getElementById('resourceLabelFilter').value = '';
+                document.getElementById('resourceTypeFilter').value = '';
+                document.getElementById('resourceSearch').value = '';
+                filterResources();
+            }
+
+            // Обновляем фильтр меток при изменении категории
+            document.getElementById('resourceCategoryFilter')?.addEventListener('change', function () {
+                const categoryId = this.value;
+                const labelFilter = document.getElementById('resourceLabelFilter');
+
+                // Показываем только метки, принадлежащие выбранной категории
+                Array.from(labelFilter.options).forEach(option => {
+                    if (option.value === '') return;
+
+                    const optionCategory = option.dataset.category;
+                    if (categoryId && optionCategory != categoryId) {
+                        option.style.display = 'none';
+                    } else {
+                        option.style.display = 'block';
+                    }
+                });
+
+                filterResources();
+            });
+
+            // Добавляем обработчики событий
+            document.addEventListener('DOMContentLoaded', function () {
+                // Фильтры для ресурсов
+                const resourceCategoryFilter = document.getElementById('resourceCategoryFilter');
+                const resourceLabelFilter = document.getElementById('resourceLabelFilter');
+                const resourceTypeFilter = document.getElementById('resourceTypeFilter');
+                const resourceSearch = document.getElementById('resourceSearch');
+
+                if (resourceCategoryFilter) {
+                    resourceCategoryFilter.addEventListener('change', filterResources);
+                }
+
+                if (resourceLabelFilter) {
+                    resourceLabelFilter.addEventListener('change', filterResources);
+                }
+
+                if (resourceTypeFilter) {
+                    resourceTypeFilter.addEventListener('change', filterResources);
+                }
+
+                if (resourceSearch) {
+                    resourceSearch.addEventListener('input', filterResources);
+                }
+
+                // Обновляем счетчик при открытии модального окна
+                const resourcesModal = document.getElementById('resourcesModal');
+                if (resourcesModal) {
+                    resourcesModal.addEventListener('shown.bs.modal', function () {
+                        filterResources();
+                    });
+                }
+            });
+
+            // Обновляем функцию openResourcesModal
+            function openResourcesModal() {
+                const modal = new bootstrap.Modal(document.getElementById('resourcesModal'));
+
+                // Обновляем чекбоксы в соответствии с выбранными ресурсами
+                document.querySelectorAll('#resourcesList .resource-checkbox').forEach(cb => {
+                    cb.checked = selectedResourcesData.hasOwnProperty(cb.value);
+                });
+
+                // Сбрасываем фильтры
+                clearResourceFilters();
+
+                modal.show();
+            }
+        </script>
+
+        <script>
+            // Функция для обновления счетчика выбранных тем
+            function updateSelectedTopicsCount() {
+                const checkboxes = document.querySelectorAll('#topicsList .topic-checkbox:checked');
+                const count = checkboxes.length;
+                const countSpan = document.getElementById('selectedTopicsCount');
+                if (countSpan) {
+                    countSpan.textContent = count;
+                }
+            }
+
+            // Функция для снятия всех галочек с тем
+            function clearAllTopicSelections() {
+                const checkboxes = document.querySelectorAll('#topicsList .topic-checkbox');
+                checkboxes.forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+                updateSelectedTopicsCount();
+            }
+
+            // Обновляем счетчик при загрузке модального окна
+            document.getElementById('topicsModal').addEventListener('show.bs.modal', function () {
+                updateSelectedTopicsCount();
+            });
+
+            // Обновляем счетчик при изменении состояния чекбоксов
+            document.addEventListener('DOMContentLoaded', function () {
+                const observer = new MutationObserver(function () {
+                    updateSelectedTopicsCount();
+                });
+
+                const topicsList = document.getElementById('topicsList');
+                if (topicsList) {
+                    observer.observe(topicsList, { childList: true, subtree: true, attributes: true });
+                }
+
+                // Также обновляем при клике на чекбоксы
+                document.addEventListener('change', function (e) {
+                    if (e.target.classList && e.target.classList.contains('topic-checkbox')) {
+                        updateSelectedTopicsCount();
+                    }
+                });
+            });
+        </script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 
 </html>
