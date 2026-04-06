@@ -301,7 +301,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['save_lesson']) || is
         }
 
         $pdo->commit();
-        header('Location: lessons.php?diary_id=' . $diaryId . '&message=saved');
+        // header('Location: lessons.php?diary_id=' . $diaryId . '&message=saved');
         exit();
 
     } catch (Exception $e) {
@@ -431,6 +431,7 @@ if ($publicView) {
 // Копирование занятия
 if (isset($_GET['copy']) && $lessonId) {
     try {
+        $from = isset($_GET['from']) ? $_GET['from'] : '';
         $pdo->beginTransaction();
 
         // Получаем исходное занятие
@@ -505,8 +506,14 @@ if (isset($_GET['copy']) && $lessonId) {
             }
 
             $pdo->commit();
-            header('Location: lessons.php?diary_id=' . $diaryId . '&message=copied');
+            // Перенаправляем в зависимости от источника
+            if ($from === 'dashboard') {
+                header('Location: dashboard.php?message=copied');
+            } else {
+                header('Location: lessons.php?action=edit&id=' . $newLessonId . '&diary_id=' . $sourceLesson['diary_id'] . '&message=copied');
+            }
             exit();
+            
         }
     } catch (Exception $e) {
         $pdo->rollBack();
@@ -1538,7 +1545,21 @@ if (isset($_GET['delete']) && $lessonId) {
                             <div class="row">
                                 <div class="col-md-2">
                                     <div class="lesson-date">
-                                        <?php echo date('d.m.Y', strtotime($lesson['lesson_date'])); ?>
+                                        <?php
+                                        $days = [
+                                            'Monday' => 'Пн',
+                                            'Tuesday' => 'Вт',
+                                            'Wednesday' => 'Ср',
+                                            'Thursday' => 'Чт',
+                                            'Friday' => 'Пт',
+                                            'Saturday' => 'Сб',
+                                            'Sunday' => 'Вс'
+                                        ];
+                                        $dayName = date('l', strtotime($lesson['lesson_date']));
+                                        ?>
+                                        <?php echo date('d.m.Y', strtotime($lesson['lesson_date']));
+                                        ?>
+                                        <span class="text-muted">(<?php echo $days[$dayName]; ?>)</span>
                                     </div>
                                     <div class="lesson-time">
                                         <?php echo date('H:i', strtotime($lesson['start_time'])); ?>

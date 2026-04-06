@@ -272,9 +272,14 @@ if (isset($_GET['copy']) && $lessonId) {
 
             $pdo->commit();
 
-            // Перенаправляем на редактирование созданной копии
-            header('Location: lessons.php?action=edit&id=' . $newLessonId . '&diary_id=' . $sourceLesson['diary_id'] . '&message=copied');
+            // Перенаправляем в зависимости от источника
+            if ($from === 'dashboard') {
+                header('Location: dashboard.php?message=copied');
+            } else {
+                header('Location: lessons.php?action=edit&id=' . $newLessonId . '&diary_id=' . $sourceLesson['diary_id'] . '&message=copied');
+            }
             exit();
+
         }
     } catch (Exception $e) {
         $pdo->rollBack();
@@ -1355,18 +1360,18 @@ if (isset($_GET['copy']) && $lessonId) {
                                                     </a>
                                                 </div>
                                                 <div class="col-6">
-                                                    <a href="private_diary.php?id=<?php echo $lesson['diary_id']; ?>"
+                                                    <a href="private_diary_enchanced.php?id=<?php echo $lesson['diary_id']; ?>"
                                                         class="btn btn-sm btn-outline-info w-100 p-1" style="height: 30px;"
                                                         data-bs-toggle="tooltip" title="Дневник">
                                                         <i class="bi bi-info-circle"></i>
                                                     </a>
                                                 </div>
                                                 <div class="col-6">
-                                                    <a href="lessons.php?copy=1&id=<?php echo $lesson['id']; ?>&diary_id=<?php echo $lesson['diary_id']; ?>"
+                                                    <a href="lessons.php?copy=1&id=<?php echo $lesson['id']; ?>&diary_id=<?php echo $lesson['diary_id']; ?>&from=dashboard"
                                                         class="btn btn-sm btn-outline-success w-100 p-1"
                                                         style="width: 30px; height: 30px;" data-bs-toggle="tooltip"
-                                                        title="Создать копию занятия и перейти к редактированию"
-                                                        onclick="return confirm('Создать копию этого занятия и перейти к редактированию?')">
+                                                        title="Создать копию занятия "
+                                                        onclick="return confirm('Создать копию этого занятия?')">
                                                         <i class="bi bi-files"></i>
                                                     </a>
                                                 </div>
