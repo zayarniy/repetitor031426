@@ -301,7 +301,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['save_lesson']) || is
         }
 
         $pdo->commit();
-        // header('Location: lessons.php?diary_id=' . $diaryId . '&message=saved');
+         header('Location: lessons.php?diary_id=' . $diaryId . '&message=saved');
         exit();
 
     } catch (Exception $e) {
